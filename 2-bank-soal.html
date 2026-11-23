@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2. Pengelolaan Mata Pelajaran & Bank Soal - CBT SRT 68 Luwu Utara V.1.0</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="shared-cbt.css">
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="1-manajemen-data-pengguna.html" class="brand"><span><i class="fa-solid fa-desktop" style="margin-right:6px;color:#f472b6;"></i>CBT SRT 68 Luwu Utara</span> <span>V.1.0</span></a>
+  <div class="nav-links"></div>
+</nav>
+
+<div class="container">
+  <div class="header-banner">
+    <div>
+      <h1>Modul 2: Pengelolaan Mata Pelajaran (Mapel) & Bank Soal Digital</h1>
+      <p id="guruBannerSubtitle">Kelola daftar Mata Pelajaran, aktifkan Mapel ujian, dan susun butir soal berdasarkan Mata Pelajaran.</p>
+    </div>
+    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+      <span class="badge badge-blue" style="font-size:0.88rem; padding:0.5rem 0.9rem;" id="activeMapelBadge">Mapel Aktif: -</span>
+      <span class="badge badge-amber" style="font-size:0.88rem; padding:0.5rem 0.9rem;" id="totalBobotBadge">Total Bobot: 100 Poin</span>
+      <a href="5-penilaian-analisis.html" id="btnShortcutRekapMapel" class="btn btn-success btn-sm" style="padding:0.5rem 0.9rem;">Rekap Nilai Mapel &rarr;</a>
+    </div>
+  </div>
+
+  <!-- KELOLA MATA PELAJARAN (MAPEL) -->
+  <div class="card">
+    <div class="card-title">
+      <span>Manajemen Mata Pelajaran (Mapel)</span>
+      <span style="font-size:0.8rem; color:var(--muted);">Tambah Mapel baru atau pilih Mapel aktif untuk sesi ujian</span>
+    </div>
+    <div class="grid-2" style="align-items:end;">
+      <form onsubmit="addMapel(event)" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+        <div class="form-group" style="flex:1; min-width:210px; margin-bottom:0;">
+          <label>Tambah Nama Mata Pelajaran Baru</label>
+          <input type="text" id="newMapelName" required placeholder="Contoh: Administrasi Infrastruktur Jaringan">
+        </div>
+        <button type="submit" class="btn btn-success">Tambah Mapel</button>
+      </form>
+
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+        <div class="form-group" style="flex:1; min-width:210px; margin-bottom:0;">
+          <label>Pilih Mata Pelajaran Aktif Ujian</label>
+          <select id="selectActiveMapel"></select>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="activateSelectedMapel()">Aktifkan Mapel</button>
+        <button type="button" class="btn btn-danger" onclick="deleteSelectedMapel()">Hapus Mapel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PENGATURAN PENGACAKAN -->
+  <div class="card">
+    <div class="card-title">Pengaturan Paket Ujian & Pengacakan Otomatis</div>
+    <div class="grid-4">
+      <div class="form-group">
+        <label>Judul Ujian</label>
+        <input type="text" id="cfgTitle">
+      </div>
+      <div class="form-group">
+        <label>Durasi (Menit)</label>
+        <input type="number" id="cfgDuration" min="5" max="240">
+      </div>
+      <div class="form-group">
+        <label>Acak Urutan Soal</label>
+        <select id="cfgShuffleQ">
+          <option value="true">Aktif (Acak per Siswa)</option>
+          <option value="false">Tidak (Urut Bank Soal)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Acak Pilihan Jawaban</label>
+        <select id="cfgShuffleOpt">
+          <option value="true">Aktif (Acak Opsi PG)</option>
+          <option value="false">Tidak</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveExamConfig()">Simpan Konfigurasi Ujian</button>
+  </div>
+
+  <div class="grid-2">
+    <!-- FORM BUAT SOAL -->
+    <div class="card">
+      <div class="card-title">Tambah Butir Soal Baru</div>
+      <form onsubmit="addQuestion(event)">
+        <div class="form-group">
+          <label>Mata Pelajaran Soal</label>
+          <select id="qSubject" required></select>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Tipe Soal</label>
+            <select id="qType" onchange="toggleQuestionFields()">
+              <option value="PG">Pilihan Ganda (PG)</option>
+              <option value="BS">Benar / Salah</option>
+              <option value="ISIAN">Jawaban Singkat</option>
+              <option value="JODOH">Menjodohkan</option>
+              <option value="ESAI">Esai / Uraian</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Bobot Nilai</label>
+            <input type="number" id="qWeight" value="10" min="1" max="100" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Pertanyaan / Naskah Soal</label>
+          <textarea id="qText" rows="3" required placeholder="Tuliskan pertanyaan di sini..."></textarea>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Sisipkan Media (Opsional)</label>
+            <select id="qMediaType">
+              <option value="none">Tanpa Media</option>
+              <option value="image">Gambar (URL)</option>
+              <option value="audio">Audio Listening (URL MP3)</option>
+              <option value="video">Video (URL MP4)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>URL File Media</label>
+            <input type="text" id="qMediaUrl" placeholder="https://...">
+          </div>
+        </div>
+
+        <!-- OPSI PG -->
+        <div id="boxPG">
+          <div class="grid-2">
+            <div class="form-group"><label>Opsi A</label><input type="text" id="optA" placeholder="Pilihan A"></div>
+            <div class="form-group"><label>Opsi B</label><input type="text" id="optB" placeholder="Pilihan B"></div>
+            <div class="form-group"><label>Opsi C</label><input type="text" id="optC" placeholder="Pilihan C"></div>
+            <div class="form-group"><label>Opsi D</label><input type="text" id="optD" placeholder="Pilihan D"></div>
+          </div>
+          <div class="form-group">
+            <label>Kunci Jawaban PG</label>
+            <select id="ansPG">
+              <option value="A">Opsi A</option>
+              <option value="B">Opsi B</option>
+              <option value="C">Opsi C</option>
+              <option value="D">Opsi D</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- OPSI BENAR SALAH -->
+        <div id="boxBS" style="display:none;">
+          <div class="form-group">
+            <label>Kunci Jawaban Benar / Salah</label>
+            <select id="ansBS">
+              <option value="Benar">Benar</option>
+              <option value="Salah">Salah</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- OPSI ISIAN -->
+        <div id="boxISIAN" style="display:none;">
+          <div class="form-group">
+            <label>Kunci Jawaban Singkat (Case-Insensitive)</label>
+            <input type="text" id="ansISIAN" placeholder="Masukkan kata kunci jawaban tepat">
+          </div>
+        </div>
+
+        <!-- OPSI MENJODOHKAN -->
+        <div id="boxJODOH" style="display:none;">
+          <label>Pasangan Pernyataan & Jawaban (3 Pasang)</label>
+          <div class="grid-2" style="margin-bottom:0.4rem;">
+            <input type="text" id="jL1" placeholder="Pernyataan 1"><input type="text" id="jR1" placeholder="Pasangan 1">
+            <input type="text" id="jL2" placeholder="Pernyataan 2"><input type="text" id="jR2" placeholder="Pasangan 2">
+            <input type="text" id="jL3" placeholder="Pernyataan 3"><input type="text" id="jR3" placeholder="Pasangan 3">
+          </div>
+        </div>
+
+        <!-- OPSI ESAI -->
+        <div id="boxESAI" style="display:none;">
+          <div class="form-group">
+            <label>Pedoman / Rubrik Penilaian Esai</label>
+            <textarea id="ansESAI" rows="2" placeholder="Kriteria penilaian untuk koreksi manual guru..."></textarea>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Pembahasan Soal (Untuk Hasil Akhir Siswa)</label>
+          <input type="text" id="qExp" placeholder="Penjelasan jawaban benar...">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Simpan ke Bank Soal</button>
+      </form>
+    </div>
+
+    <!-- IMPOR MASSAL & DAFTAR SOAL -->
+    <div>
+      <div class="card">
+        <div class="card-title">Impor Soal Massal (Dokumen Word .DOCX)</div>
+        <p style="font-size:0.85rem; color:var(--muted); margin-bottom:0.75rem;">
+          Unggah soal menggunakan file Word (<code>.docx</code>) berformat tabel (<code>tipe | pertanyaan | opsiA | opsiB | opsiC | opsiD | kunci | bobot | pembahasan</code>) atau format paragraf bernomor (<code>1. ... A. ... B. ... C. ... D. ... Kunci: ...</code>). Soal akan masuk ke Mapel yang dipilih di form sebelah kiri.
+        </p>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <input type="file" id="soalDocxInput" accept=".docx" onchange="importQuestionsDOCX(event)" style="flex:1;">
+          <button class="btn btn-outline" onclick="downloadSoalTemplateDOCX()"><i class="fa-solid fa-file-word"></i> Unduh Templat (.DOCX)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Daftar Butir Soal (<span id="qCount">0</span>)</span>
+          <select id="filterMapelSoal" style="width:210px; padding:0.35rem 0.65rem; font-size:0.82rem;" onchange="renderQuestions()">
+            <option value="ALL">Semua Mata Pelajaran</option>
+          </select>
+        </div>
+        <div id="questionList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="shared-cbt.js"></script>
+<script>
+  const MAPEL_STORAGE_KEY = 'CBT_MAPEL_LIST_V1';
+
+  function getMapelList() {
+    const db = getDB();
+    const saved = JSON.parse(localStorage.getItem(MAPEL_STORAGE_KEY) || 'null');
+    const set = new Set(saved || [
+      'Informatika & Literasi Digital',
+      'Teknik Komputer dan Jaringan (TKJ)',
+      'Koding dan Kecerdasan Artifisial (KKA)'
+    ]);
+    if (db.settings && db.settings.subject) set.add(db.settings.subject);
+    (db.questions || []).forEach(q => { if (q.subject) set.add(q.subject); });
+    const auth = getStaffAuth();
+    if (auth && auth.role === 'Guru' && auth.subject && auth.subject !== '-') {
+      parseSubjectsString(auth.subject).forEach(m => set.add(m));
+    }
+    const list = Array.from(set);
+    localStorage.setItem(MAPEL_STORAGE_KEY, JSON.stringify(list));
+    return list;
+  }
+
+  function saveMapelList(list) {
+    localStorage.setItem(MAPEL_STORAGE_KEY, JSON.stringify(list));
+    populateMapelDropdowns();
+  }
+
+  function populateMapelDropdowns() {
+    const db = getDB();
+    const list = getMapelList();
+    const activeSubj = db.settings.subject || list[0];
+
+    document.getElementById('activeMapelBadge').textContent = 'Mapel Aktif: ' + activeSubj;
+
+    const selActive = document.getElementById('selectActiveMapel');
+    const selQSubj = document.getElementById('qSubject');
+    const selFilter = document.getElementById('filterMapelSoal');
+
+    selActive.innerHTML = list.map(m => `<option value="${m}" ${m === activeSubj ? 'selected' : ''}>${m}</option>`).join('');
+    selQSubj.innerHTML = list.map(m => `<option value="${m}" ${m === activeSubj ? 'selected' : ''}>${m}</option>`).join('');
+
+    const prevFilter = selFilter.value || 'ALL';
+    selFilter.innerHTML = `<option value="ALL">Semua Mata Pelajaran</option>` +
+      list.map(m => `<option value="${m}" ${m === prevFilter ? 'selected' : ''}>${m}</option>`).join('');
+  }
+
+  function addMapel(e) {
+    e.preventDefault();
+    const val = document.getElementById('newMapelName').value.trim();
+    if (!val) return;
+    const list = getMapelList();
+    if (list.some(m => m.toLowerCase() === val.toLowerCase())) {
+      return alert('Mata pelajaran tersebut sudah terdaftar!');
+    }
+    list.push(val);
+    saveMapelList(list);
+    document.getElementById('selectActiveMapel').value = val;
+    document.getElementById('qSubject').value = val;
+    e.target.reset();
+    alert(`Mata Pelajaran "${val}" berhasil ditambahkan!`);
+  }
+
+  function activateSelectedMapel() {
+    const db = getDB();
+    const chosen = document.getElementById('selectActiveMapel').value;
+    db.settings.subject = chosen;
+    saveDB(db);
+    populateMapelDropdowns();
+    alert(`Mata Pelajaran aktif ujian diubah menjadi: ${chosen}`);
+  }
+
+  async function deleteSelectedMapel() {
+    const list = getMapelList();
+    if (list.length <= 1) return alert('Minimal harus tersedia 1 Mata Pelajaran.');
+    const target = document.getElementById('selectActiveMapel').value;
+    const ok = await showCBTConfirm({
+      type: 'danger',
+      title: 'Hapus Mata Pelajaran?',
+      message: `Mata Pelajaran <strong>"${target}"</strong> akan dihapus dari daftar pilihan aktif.`,
+      confirmText: 'Ya, Hapus Mapel',
+      cancelText: 'Batal'
+    });
+    if (!ok) return;
+    const updated = list.filter(m => m !== target);
+    const db = getDB();
+    if (db.settings.subject === target) {
+      db.settings.subject = updated[0];
+      saveDB(db);
+    }
+    saveMapelList(updated);
+    showCBTNotification('success', 'Mapel Dihapus', `Mata Pelajaran "${target}" berhasil dihapus.`);
+  }
+
+  function loadConfig() {
+    const db = getDB();
+    document.getElementById('cfgTitle').value = db.settings.examTitle;
+    document.getElementById('cfgDuration').value = db.settings.durationMinutes;
+    document.getElementById('cfgShuffleQ').value = String(db.settings.shuffleQuestions);
+    document.getElementById('cfgShuffleOpt').value = String(db.settings.shuffleOptions);
+  }
+
+  function saveExamConfig() {
+    const db = getDB();
+    db.settings.examTitle = document.getElementById('cfgTitle').value;
+    db.settings.durationMinutes = parseInt(document.getElementById('cfgDuration').value) || 45;
+    db.settings.shuffleQuestions = document.getElementById('cfgShuffleQ').value === 'true';
+    db.settings.shuffleOptions = document.getElementById('cfgShuffleOpt').value === 'true';
+    saveDB(db);
+    alert('Pengaturan pengacakan dan durasi ujian diperbarui!');
+  }
+
+  function toggleQuestionFields() {
+    const t = document.getElementById('qType').value;
+    ['PG', 'BS', 'ISIAN', 'JODOH', 'ESAI'].forEach(k => {
+      document.getElementById('box' + k).style.display = (k === t) ? 'block' : 'none';
+    });
+  }
+
+  function addQuestion(e) {
+    e.preventDefault();
+    const db = getDB();
+    const subject = document.getElementById('qSubject').value || db.settings.subject;
+    const type = document.getElementById('qType').value;
+    const text = document.getElementById('qText').value.trim();
+    const weight = parseInt(document.getElementById('qWeight').value) || 10;
+    const mediaType = document.getElementById('qMediaType').value;
+    const mediaUrl = document.getElementById('qMediaUrl').value.trim();
+    const explanation = document.getElementById('qExp').value.trim() || 'Sesuai kunci jawaban.';
+
+    let options = [];
+    let pairs = [];
+    let answer = '';
+
+    if (type === 'PG') {
+      const a = document.getElementById('optA').value.trim();
+      const b = document.getElementById('optB').value.trim();
+      const c = document.getElementById('optC').value.trim();
+      const d = document.getElementById('optD').value.trim();
+      options = [a, b, c, d];
+      const map = { A: a, B: b, C: c, D: d };
+      answer = map[document.getElementById('ansPG').value];
+    } else if (type === 'BS') {
+      options = ['Benar', 'Salah'];
+      answer = document.getElementById('ansBS').value;
+    } else if (type === 'ISIAN') {
+      answer = document.getElementById('ansISIAN').value.trim();
+    } else if (type === 'JODOH') {
+      pairs = [
+        { left: document.getElementById('jL1').value.trim(), right: document.getElementById('jR1').value.trim() },
+        { left: document.getElementById('jL2').value.trim(), right: document.getElementById('jR2').value.trim() },
+        { left: document.getElementById('jL3').value.trim(), right: document.getElementById('jR3').value.trim() }
+      ].filter(p => p.left && p.right);
+      answer = pairs.map(p => `${p.left}->${p.right}`).join(' | ');
+    } else if (type === 'ESAI') {
+      answer = document.getElementById('ansESAI').value.trim();
+    }
+
+    db.questions.push({
+      id: 'Q' + (db.questions.length + 1) + '_' + Date.now().toString().slice(-3),
+      type, subject, text, mediaType, mediaUrl, options, pairs, answer, weight, explanation
+    });
+    saveDB(db);
+    e.target.reset();
+    document.getElementById('qSubject').value = subject;
+    toggleQuestionFields();
+    renderQuestions();
+    alert(`Soal berhasil ditambahkan ke Mapel "${subject}"!`);
+  }
+
+  async function deleteQuestion(id) {
+    const db = getDB();
+    const target = db.questions.find(q => q.id === id);
+    const preview = target ? target.text.slice(0, 60) + (target.text.length > 60 ? '...' : '') : id;
+    const ok = await showCBTConfirm({
+      type: 'danger',
+      title: 'Hapus Butir Soal?',
+      message: `Hapus soal ini dari bank soal?<br><small style="color:#64748b;">"${preview}"</small>`,
+      confirmText: 'Ya, Hapus Soal',
+      cancelText: 'Batal'
+    });
+    if (!ok) return;
+    db.questions = db.questions.filter(q => q.id !== id);
+    saveDB(db);
+    renderQuestions();
+    showCBTNotification('success', 'Soal Dihapus', 'Butir soal berhasil dihapus dari bank soal.');
+  }
+
+  function renderQuestions() {
+    const db = getDB();
+    const filterMapel = document.getElementById('filterMapelSoal').value;
+    const filtered = (db.questions || []).filter(q => filterMapel === 'ALL' || (q.subject || db.settings.subject) === filterMapel);
+
+    document.getElementById('qCount').textContent = filtered.length;
+    const totalBobot = filtered.reduce((acc, q) => acc + (q.weight || 0), 0);
+    document.getElementById('totalBobotBadge').textContent = `Total Bobot: ${totalBobot} Poin`;
+
+    if (filtered.length === 0) {
+      document.getElementById('questionList').innerHTML = `<p style="color:var(--muted); font-size:0.88rem; text-align:center; padding:1rem;">Belum ada soal untuk mata pelajaran ini.</p>`;
+      return;
+    }
+
+    document.getElementById('questionList').innerHTML = filtered.map((q, i) => `
+      <div style="border:1px solid var(--border); border-radius:8px; padding:0.85rem; margin-bottom:0.75rem; background:#fff;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem; flex-wrap:wrap; gap:0.35rem;">
+          <div>
+            <span class="badge badge-blue">#${i+1} • ${q.type}</span>
+            <span class="badge badge-green">${q.subject || db.settings.subject}</span>
+            <span class="badge badge-gray">Bobot: ${q.weight}</span>
+            ${q.mediaType !== 'none' ? `<span class="badge badge-amber">Media: ${q.mediaType}</span>` : ''}
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="deleteQuestion('${q.id}')">Hapus</button>
+        </div>
+        <p style="font-size:0.9rem; font-weight:600; margin-bottom:0.35rem;">${q.text}</p>
+        <div style="font-size:0.8rem; color:var(--success);"><strong>Kunci:</strong> ${q.answer}</div>
+      </div>
+    `).join('');
+  }
+
+  function downloadSoalTemplateDOCX() {
+    downloadDOCX(
+      'templat_bank_soal_cbt.docx',
+      'TEMPLAT IMPOR BANK SOAL CBT SRT 68 LUWU UTARA',
+      'Tipe soal: PG (Pilihan Ganda), BS (Benar/Salah), ISIAN, atau ESAI. Kolom kunci PG dapat diisi teks jawaban maupun huruf A/B/C/D.',
+      ['tipe', 'pertanyaan', 'opsiA', 'opsiB', 'opsiC', 'opsiD', 'kunci', 'bobot', 'pembahasan'],
+      [
+        ['PG', 'Perangkat keras yang berfungsi sebagai otak pemroses utama komputer adalah...', 'RAM', 'CPU', 'Harddisk', 'Monitor', 'CPU', '10', 'CPU memproses seluruh instruksi program.'],
+        ['BS', 'HTML merupakan bahasa pemrograman backend berbasis server.', '', '', '', '', 'Salah', '10', 'HTML adalah bahasa markup untuk menyusun struktur halaman web.'],
+        ['ISIAN', 'Protokol standar untuk mengamankan koneksi web dengan enkripsi adalah...', '', '', '', '', 'HTTPS', '15', 'HTTPS menggunakan sertifikat SSL/TLS.']
+      ]
+    );
+  }
+
+  function _resolveImportedAnswer(type, a, b, c, d, rawAnswer) {
+    const ans = (rawAnswer || '').trim();
+    if (type === 'PG') {
+      const upper = ans.toUpperCase();
+      const letterMap = { A: a, B: b, C: c, D: d };
+      if (letterMap[upper]) return letterMap[upper];
+    } else if (type === 'BS') {
+      if (ans.toLowerCase() === 'b' || ans.toLowerCase() === 'true') return 'Benar';
+      if (ans.toLowerCase() === 's' || ans.toLowerCase() === 'false') return 'Salah';
+    }
+    return ans;
+  }
+
+  async function importQuestionsDOCX(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      const parsed = await parseDocxFile(file);
+      const db = getDB();
+      const targetSubject = document.getElementById('qSubject').value || db.settings.subject;
+      let imported = 0;
+
+      // Mode 1: Format Tabel Word (.docx)
+      if (parsed.tables && parsed.tables.length > 0) {
+        parsed.tables.forEach(table => {
+          if (table.length === 0) return;
+          const firstCell = (table[0][0] || '').toLowerCase();
+          const secondCell = (table[0][1] || '').toLowerCase();
+          const startIdx = (firstCell.includes('tipe') || secondCell.includes('pertanyaan')) ? 1 : 0;
+
+          table.slice(startIdx).forEach(cols => {
+            if (cols.length >= 2 && cols[1]) {
+              const type = ((cols[0] || 'PG').trim().toUpperCase()) || 'PG';
+              const text = (cols[1] || '').trim();
+              const a = (cols[2] || '').trim();
+              const b = (cols[3] || '').trim();
+              const cc = (cols[4] || '').trim();
+              const d = (cols[5] || '').trim();
+              const rawAns = (cols[6] || '').trim();
+              const weight = parseInt(cols[7]) || 10;
+              const explanation = (cols[8] || '').trim() || 'Sesuai kunci jawaban.';
+
+              db.questions.push({
+                id: 'Q_IMP_' + Math.random().toString(36).slice(2, 6),
+                type,
+                subject: targetSubject,
+                text,
+                mediaType: 'none',
+                mediaUrl: '',
+                options: type === 'PG' ? [a, b, cc, d] : (type === 'BS' ? ['Benar', 'Salah'] : []),
+                pairs: [],
+                answer: _resolveImportedAnswer(type, a, b, cc, d, rawAns),
+                weight,
+                explanation
+              });
+              imported++;
+            }
+          });
+        });
+      }
+
+      // Mode 2 (Fallback): Format Paragraf Bernomor jika tidak memakai tabel
+      if (imported === 0 && parsed.paragraphs && parsed.paragraphs.length > 0) {
+        let current = null;
+        const flushQuestion = () => {
+          if (!current || !current.text) return;
+          const hasOpts = current.options.some(o => o !== '');
+          const qType = current.type || (hasOpts ? 'PG' : 'ESAI');
+          const [a = '', b = '', cc = '', d = ''] = current.options;
+          db.questions.push({
+            id: 'Q_IMP_' + Math.random().toString(36).slice(2, 6),
+            type: qType,
+            subject: targetSubject,
+            text: current.text,
+            mediaType: 'none',
+            mediaUrl: '',
+            options: qType === 'PG' ? [a, b, cc, d] : (qType === 'BS' ? ['Benar', 'Salah'] : []),
+            pairs: [],
+            answer: _resolveImportedAnswer(qType, a, b, cc, d, current.answer),
+            weight: current.weight || 10,
+            explanation: current.explanation || 'Sesuai kunci jawaban.'
+          });
+          imported++;
+          current = null;
+        };
+
+        parsed.paragraphs.forEach(line => {
+          const qMatch = line.match(/^(\d+)[\.\)]\s*(.+)$/);
+          const optMatch = line.match(/^([A-Da-d])[\.\)]\s*(.+)$/);
+          const keyMatch = line.match(/^(?:kunci|jawaban)\s*[:\-]\s*(.+)$/i);
+          const expMatch = line.match(/^pembahasan\s*[:\-]\s*(.+)$/i);
+          const weightMatch = line.match(/^bobot\s*[:\-]\s*(\d+)/i);
+
+          if (qMatch && !optMatch) {
+            flushQuestion();
+            current = { type: '', text: qMatch[2].trim(), options: ['', '', '', ''], answer: '', weight: 10, explanation: '' };
+          } else if (current && optMatch) {
+            const idx = optMatch[1].toUpperCase().charCodeAt(0) - 65;
+            if (idx >= 0 && idx < 4) current.options[idx] = optMatch[2].trim();
+          } else if (current && keyMatch) {
+            current.answer = keyMatch[1].trim();
+          } else if (current && expMatch) {
+            current.explanation = expMatch[1].trim();
+          } else if (current && weightMatch) {
+            current.weight = parseInt(weightMatch[1]) || 10;
+          } else if (current && !current.answer && current.options.every(o => !o)) {
+            current.text += ' ' + line.trim();
+          }
+        });
+        flushQuestion();
+      }
+
+      if (imported === 0) {
+        event.target.value = '';
+        return alert('Tidak ada data soal valid yang ditemukan di dalam file .docx. Silakan gunakan templat .docx yang tersedia.');
+      }
+
+      saveDB(db);
+      renderQuestions();
+      event.target.value = '';
+      if (typeof showCBTNotification === 'function') {
+        showCBTNotification('success', 'Impor Soal .DOCX Berhasil', `Berhasil mengimpor ${imported} soal ke Mapel "${targetSubject}"!`);
+      } else {
+        alert(`Berhasil mengimpor ${imported} soal ke Mapel "${targetSubject}"!`);
+      }
+    } catch (err) {
+      event.target.value = '';
+      alert('Gagal membaca file .docx: ' + err.message);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    applyRoleNavigation('2-bank-soal.html');
+    const auth = getStaffAuth();
+    loadConfig();
+    populateMapelDropdowns();
+    const guruSubjects = (auth && auth.role === 'Guru') ? parseSubjectsString(auth.subject) : [];
+    if (guruSubjects.length > 0) {
+      const dbNow = getDB();
+      const primaryGuruMapel = guruSubjects.includes(dbNow.settings?.subject) ? dbNow.settings.subject : guruSubjects[0];
+      const guruJenjangList = parseSubjectsString(auth.idKelas);
+      const jenjangText = guruJenjangList.length > 0 ? ` | Kelas Mengajar: ${guruJenjangList.join(', ')}` : '';
+      document.getElementById('guruBannerSubtitle').textContent =
+        `Panel Guru (${auth.name}) — Mata Pelajaran Diampu: ${guruSubjects.join(', ')}${jenjangText}.`;
+      document.getElementById('qSubject').value = primaryGuruMapel;
+      document.getElementById('filterMapelSoal').value = primaryGuruMapel;
+      document.getElementById('btnShortcutRekapMapel').href =
+        '5-penilaian-analisis.html?mapel=' + encodeURIComponent(primaryGuruMapel);
+    }
+    renderQuestions();
+    syncFromMySQL(() => {
+      loadConfig();
+      populateMapelDropdowns();
+      if (guruSubjects.length > 0) {
+        const dbSynced = getDB();
+        const primaryGuruMapel = guruSubjects.includes(dbSynced.settings?.subject) ? dbSynced.settings.subject : guruSubjects[0];
+        document.getElementById('qSubject').value = primaryGuruMapel;
+        document.getElementById('filterMapelSoal').value = primaryGuruMapel;
+      }
+      renderQuestions();
+    });
+  });
+</script>
+</body>
+</html>
