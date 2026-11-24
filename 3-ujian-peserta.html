@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ujian Peserta - CBT SRT 68 Luwu Utara V.1.0</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="shared-cbt.css">
   <style>
     /* Mode Layar Bersih Total (Kiosk / Safe Exam) */
@@ -152,7 +152,7 @@
     <div style="text-align:center; margin-top:1rem;">
       <a href="1-manajemen-data-pengguna.html" style="font-size:0.8rem; color:var(--muted);">Kembali ke Panel Admin</a>
     </div>
-</div>
+  </div>
 </div>
 
 <!-- LAYAR PENGERJAAN SOAL (TANPA NAVBAR / TANPA MENU GEMINI / FULLSCREEN BERSIH) -->
@@ -312,15 +312,23 @@
     isExamRunning = true;
     document.body.classList.add('exam-active');
 
-    // Ambil soal sesuai Mata Pelajaran aktif ujian
+    // Ambil soal & konfigurasi spesifik (durasi menit, acak soal/opsi) sesuai Mata Pelajaran aktif ujian
     const activeSubject = db.settings.subject || 'Informatika & Literasi Digital';
+    const subjectCfg = (typeof getSubjectConfig === 'function')
+      ? getSubjectConfig(activeSubject, db)
+      : {
+          durationMinutes: db.settings.durationMinutes || 45,
+          shuffleQuestions: db.settings.shuffleQuestions,
+          shuffleOptions: db.settings.shuffleOptions
+        };
+
     let filteredBySubject = db.questions.filter(q => (q.subject || activeSubject) === activeSubject);
     if (filteredBySubject.length === 0) filteredBySubject = db.questions;
 
-    // Acak soal & opsi jika diaktifkan
+    // Acak soal & opsi sesuai pengaturan mandiri mata pelajaran ini
     let qs = JSON.parse(JSON.stringify(filteredBySubject));
-    if (db.settings.shuffleQuestions) qs = shuffleArray(qs);
-    if (db.settings.shuffleOptions) {
+    if (subjectCfg.shuffleQuestions) qs = shuffleArray(qs);
+    if (subjectCfg.shuffleOptions) {
       qs.forEach(q => {
         if (q.type === 'PG' && Array.isArray(q.options)) q.options = shuffleArray(q.options);
       });
@@ -340,11 +348,12 @@
     }
     saveDB(db);
 
-    remainingSeconds = (db.settings.durationMinutes + (db.sessions[uname].extraMinutes || 0)) * 60;
+    const baseDurationMinutes = Number(subjectCfg.durationMinutes || db.settings.durationMinutes || 45);
+    remainingSeconds = (baseDurationMinutes + (db.sessions[uname].extraMinutes || 0)) * 60;
 
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('examScreen').style.display = 'block';
-    document.getElementById('exSubject').textContent = db.settings.examTitle + ' • ' + db.settings.subject;
+    document.getElementById('exSubject').textContent = `${db.settings.examTitle} • ${activeSubject} (${baseDurationMinutes} Menit)`;
     document.getElementById('exStudentInfo').textContent = `${user.name} (${user.username} - ${user.kelas})`;
 
     renderNavGrid();
@@ -545,7 +554,7 @@
 
     if (q.type === 'PG' || q.type === 'BS') {
       container.innerHTML = q.options.map((opt, idx) => `
-        <div class="option-item ${savedAns === opt ? 'selected' : ''}" onclick="selectOption('${q.id}', '${opt.replace(/'/g, "\'")}')">
+        <div class="option-item ${savedAns === opt ? 'selected' : ''}" onclick="selectOption('${q.id}', '${opt.replace(/'/g, "\\'")}')">
           <div class="option-letter">${q.type === 'PG' ? letters[idx] : (idx === 0 ? 'B' : 'S')}</div>
           <div>${opt}</div>
         </div>
