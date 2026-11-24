@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>2. Pengelolaan Mata Pelajaran & Bank Soal - CBT SRT 68 Luwu Utara V.1.0</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="shared-cbt.css">
 </head>
 <body>
@@ -18,10 +18,10 @@
   <div class="header-banner">
     <div>
       <h1>Modul 2: Pengelolaan Mata Pelajaran (Mapel) & Bank Soal Digital</h1>
-      <p id="guruBannerSubtitle">Kelola daftar Mata Pelajaran, aktifkan Mapel ujian, dan susun butir soal berdasarkan Mata Pelajaran.</p>
+      <p id="guruBannerSubtitle">Kelola daftar Mata Pelajaran, aktifkan jalur Mapel, dan susun butir soal berdasarkan Mata Pelajaran.</p>
     </div>
     <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-      <span class="badge badge-blue" style="font-size:0.88rem; padding:0.5rem 0.9rem;" id="activeMapelBadge">Mapel Aktif: -</span>
+      <span class="badge badge-blue" style="font-size:0.88rem; padding:0.5rem 0.9rem;" id="activeMapelBadge">Jalur Mapel Aktif: -</span>
       <span class="badge badge-amber" style="font-size:0.88rem; padding:0.5rem 0.9rem;" id="totalBobotBadge">Total Bobot: 100 Poin</span>
       <a href="5-penilaian-analisis.html" id="btnShortcutRekapMapel" class="btn btn-success btn-sm" style="padding:0.5rem 0.9rem;">Rekap Nilai Mapel &rarr;</a>
     </div>
@@ -30,11 +30,11 @@
   <!-- KELOLA MATA PELAJARAN (MAPEL) -->
   <div class="card">
     <div class="card-title">
-      <span>Manajemen Mata Pelajaran (Mapel)</span>
-      <span style="font-size:0.8rem; color:var(--muted);">Tambah Mapel baru atau pilih Mapel aktif untuk sesi ujian</span>
+      <span>Jalur Mata Pelajaran (Terisolasi Per Akun Guru)</span>
+      <span id="mapelIsolationHint" style="font-size:0.8rem; color:var(--muted);">Setiap akun guru memiliki jalur aktif & durasi menit soal mandiri (anti-bentrok)</span>
     </div>
     <div class="grid-2" style="align-items:end;">
-      <form onsubmit="addMapel(event)" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+      <form id="formAddMapel" onsubmit="addMapel(event)" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
         <div class="form-group" style="flex:1; min-width:210px; margin-bottom:0;">
           <label>Tambah Nama Mata Pelajaran Baru</label>
           <input type="text" id="newMapelName" required placeholder="Contoh: Administrasi Infrastruktur Jaringan">
@@ -44,25 +44,28 @@
 
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
         <div class="form-group" style="flex:1; min-width:210px; margin-bottom:0;">
-          <label>Pilih Mata Pelajaran Aktif Ujian</label>
-          <select id="selectActiveMapel"></select>
+          <label id="labelSelectActiveMapel">Pilih Jalur Mata Pelajaran Aktif</label>
+          <select id="selectActiveMapel" onchange="activateSelectedMapel(true)"></select>
         </div>
-        <button type="button" class="btn btn-primary" onclick="activateSelectedMapel()">Aktifkan Mapel</button>
-        <button type="button" class="btn btn-danger" onclick="deleteSelectedMapel()">Hapus Mapel</button>
+        <button type="button" class="btn btn-primary" onclick="activateSelectedMapel(false)">Aktifkan Jalur Mapel</button>
+        <button type="button" id="btnDeleteMapel" class="btn btn-danger" onclick="deleteSelectedMapel()">Hapus Mapel</button>
       </div>
     </div>
   </div>
 
-  <!-- PENGATURAN PENGACAKAN -->
+  <!-- PENGATURAN PENGACAKAN & DURASI MANDIRI PER MAPEL -->
   <div class="card">
-    <div class="card-title">Pengaturan Paket Ujian & Pengacakan Otomatis</div>
+    <div class="card-title">
+      <span id="cfgCardTitle">Pengaturan Paket Ujian & Durasi Menit Soal</span>
+      <span class="badge badge-green" id="cfgSubjIndicator">Mapel: -</span>
+    </div>
     <div class="grid-4">
       <div class="form-group">
         <label>Judul Ujian</label>
         <input type="text" id="cfgTitle">
       </div>
       <div class="form-group">
-        <label>Durasi (Menit)</label>
+        <label id="labelCfgDuration">Durasi Mapel Ini (Menit)</label>
         <input type="number" id="cfgDuration" min="5" max="240">
       </div>
       <div class="form-group">
@@ -80,7 +83,7 @@
         </select>
       </div>
     </div>
-    <button class="btn btn-primary" onclick="saveExamConfig()">Simpan Konfigurasi Ujian</button>
+    <button class="btn btn-primary" onclick="saveExamConfig()">Simpan Durasi & Konfigurasi Mapel Ini</button>
   </div>
 
   <div class="grid-2">
@@ -89,8 +92,8 @@
       <div class="card-title">Tambah Butir Soal Baru</div>
       <form onsubmit="addQuestion(event)">
         <div class="form-group">
-          <label>Mata Pelajaran Soal</label>
-          <select id="qSubject" required></select>
+          <label>Mata Pelajaran Soal (Jalur Aktif)</label>
+          <select id="qSubject" required onchange="onQuestionSubjectChange()"></select>
         </div>
 
         <div class="grid-2">
@@ -228,6 +231,13 @@
 
   function getMapelList() {
     const db = getDB();
+    const auth = getStaffAuth();
+    // Jika login sebagai Guru, batasi daftar hanya ke mata pelajaran yang diampu guru tersebut
+    if (auth && auth.role === 'Guru' && typeof getAllowedSubjectsForCurrentUser === 'function') {
+      const allowed = getAllowedSubjectsForCurrentUser(db);
+      if (allowed.length > 0) return allowed;
+    }
+
     const saved = JSON.parse(localStorage.getItem(MAPEL_STORAGE_KEY) || 'null');
     const set = new Set(saved || [
       'Informatika & Literasi Digital',
@@ -239,29 +249,40 @@
       db.settings.subjectsList.forEach(m => { if (m) set.add(m); });
     }
     (db.questions || []).forEach(q => { if (q.subject) set.add(q.subject); });
-    const auth = getStaffAuth();
-    if (auth && auth.role === 'Guru' && auth.subject && auth.subject !== '-') {
-      parseSubjectsString(auth.subject).forEach(m => set.add(m));
-    }
     const list = Array.from(set);
     localStorage.setItem(MAPEL_STORAGE_KEY, JSON.stringify(list));
     return list;
   }
 
   function saveMapelList(list) {
-    localStorage.setItem(MAPEL_STORAGE_KEY, JSON.stringify(list));
     const db = getDB();
-    db.settings.subjectsList = list;
+    const auth = getStaffAuth();
+    // Gabungkan dengan daftar global agar tidak menghapus mapel milik guru lain
+    const globalSet = new Set(getAllSubjectsList(db));
+    list.forEach(m => { if (m) globalSet.add(m); });
+    const mergedGlobal = Array.from(globalSet);
+
+    if (!auth || auth.role !== 'Guru') {
+      localStorage.setItem(MAPEL_STORAGE_KEY, JSON.stringify(list));
+      db.settings.subjectsList = list;
+    } else {
+      localStorage.setItem(MAPEL_STORAGE_KEY, JSON.stringify(mergedGlobal));
+      db.settings.subjectsList = mergedGlobal;
+    }
     saveDB(db);
-    populateMapelDropdowns();
+    populateMapelDropdowns(true);
   }
 
   function populateMapelDropdowns(preserveSelection = false) {
     const db = getDB();
+    const auth = getStaffAuth();
+    const isGuru = !!(auth && auth.role === 'Guru');
     const list = getMapelList();
-    const activeSubj = db.settings.subject || list[0];
 
-    document.getElementById('activeMapelBadge').textContent = 'Mapel Aktif: ' + activeSubj;
+    // Gunakan jalur mapel terisolasi per sesi guru/admin
+    const isolatedActive = (typeof getTeacherActiveSubject === 'function')
+      ? getTeacherActiveSubject(db)
+      : (db.settings.subject || list[0] || '');
 
     const selActive = document.getElementById('selectActiveMapel');
     const selQSubj = document.getElementById('qSubject');
@@ -269,21 +290,43 @@
 
     const chosenActive = (preserveSelection && selActive.value && list.includes(selActive.value))
       ? selActive.value
-      : activeSubj;
+      : (list.includes(isolatedActive) ? isolatedActive : (list[0] || isolatedActive));
     const chosenQSubj = (preserveSelection && selQSubj.value && list.includes(selQSubj.value))
       ? selQSubj.value
-      : activeSubj;
+      : chosenActive;
+
+    const cfg = (typeof getSubjectConfig === 'function')
+      ? getSubjectConfig(chosenActive, db)
+      : { durationMinutes: db.settings.durationMinutes || 45 };
+
+    document.getElementById('activeMapelBadge').textContent =
+      (isGuru ? 'Jalur Mapel Guru: ' : 'Mapel Aktif: ') + (chosenActive || '-') + ` (${cfg.durationMinutes} mnt)`;
+
+    const cfgIndicator = document.getElementById('cfgSubjIndicator');
+    if (cfgIndicator) {
+      cfgIndicator.textContent = `Mapel: ${chosenActive || '-'} • ${cfg.durationMinutes} Menit`;
+    }
+
+    const shortcutBtn = document.getElementById('btnShortcutRekapMapel');
+    if (shortcutBtn && chosenActive) {
+      shortcutBtn.href = '5-penilaian-analisis.html?mapel=' + encodeURIComponent(chosenActive);
+    }
 
     selActive.innerHTML = list.map(m => `<option value="${m}" ${m === chosenActive ? 'selected' : ''}>${m}</option>`).join('');
     selQSubj.innerHTML = list.map(m => `<option value="${m}" ${m === chosenQSubj ? 'selected' : ''}>${m}</option>`).join('');
 
-    const prevFilter = selFilter.value || 'ALL';
-    selFilter.innerHTML = `<option value="ALL">Semua Mata Pelajaran</option>` +
+    const prevFilter = selFilter.value || (isGuru ? chosenActive : 'ALL');
+    const allLabel = isGuru ? 'Semua Mapel Saya' : 'Semua Mata Pelajaran';
+    selFilter.innerHTML = `<option value="ALL">${allLabel}</option>` +
       list.map(m => `<option value="${m}" ${m === prevFilter ? 'selected' : ''}>${m}</option>`).join('');
   }
 
   function addMapel(e) {
     e.preventDefault();
+    const auth = getStaffAuth();
+    if (auth && auth.role === 'Guru') {
+      return alert('Penambahan Mata Pelajaran baru hanya dapat dilakukan oleh Administrator pada menu Data, Kelas & Pengguna.');
+    }
     const val = document.getElementById('newMapelName').value.trim();
     if (!val) return;
     const list = getMapelList();
@@ -292,22 +335,71 @@
     }
     list.push(val);
     saveMapelList(list);
+    if (typeof setTeacherActiveSubject === 'function') {
+      setTeacherActiveSubject(val, false);
+    }
     document.getElementById('selectActiveMapel').value = val;
     document.getElementById('qSubject').value = val;
+    loadConfig();
     e.target.reset();
     alert(`Mata Pelajaran "${val}" berhasil ditambahkan!`);
   }
 
-  function activateSelectedMapel() {
-    const db = getDB();
+  function activateSelectedMapel(silent = false) {
+    const auth = getStaffAuth();
+    const isAdmin = !!(auth && auth.role === 'Admin');
     const chosen = document.getElementById('selectActiveMapel').value;
-    db.settings.subject = chosen;
-    saveDB(db);
-    populateMapelDropdowns();
-    alert(`Mata Pelajaran aktif ujian diubah menjadi: ${chosen}`);
+    if (!chosen) return;
+
+    // Simpan ke jalur terisolasi guru; hanya Admin yang mengubah mapel ujian global siswa
+    if (typeof setTeacherActiveSubject === 'function') {
+      setTeacherActiveSubject(chosen, isAdmin);
+    } else {
+      const db = getDB();
+      db.settings.subject = chosen;
+      saveDB(db);
+    }
+
+    document.getElementById('qSubject').value = chosen;
+    document.getElementById('filterMapelSoal').value = chosen;
+
+    populateMapelDropdowns(true);
+    loadConfig();
+    renderQuestions();
+    if (typeof applyRoleNavigation === 'function') {
+      applyRoleNavigation('2-bank-soal.html');
+    }
+
+    if (!silent) {
+      const cfg = (typeof getSubjectConfig === 'function') ? getSubjectConfig(chosen) : { durationMinutes: 45 };
+      if (isAdmin) {
+        alert(`Mata Pelajaran aktif ujian siswa & jalur kerja diubah menjadi: ${chosen} (${cfg.durationMinutes} menit)`);
+      } else {
+        alert(`Jalur kerja aktif Anda beralih ke: ${chosen} (${cfg.durationMinutes} menit) — terisolasi dari akun guru lain.`);
+      }
+    }
+  }
+
+  function onQuestionSubjectChange() {
+    const chosen = document.getElementById('qSubject').value;
+    if (!chosen) return;
+    const auth = getStaffAuth();
+    const isAdmin = !!(auth && auth.role === 'Admin');
+    if (typeof setTeacherActiveSubject === 'function') {
+      setTeacherActiveSubject(chosen, isAdmin);
+    }
+    document.getElementById('selectActiveMapel').value = chosen;
+    document.getElementById('filterMapelSoal').value = chosen;
+    populateMapelDropdowns(true);
+    loadConfig();
+    renderQuestions();
   }
 
   async function deleteSelectedMapel() {
+    const auth = getStaffAuth();
+    if (auth && auth.role === 'Guru') {
+      return alert('Hanya Administrator yang dapat menghapus Mata Pelajaran dari sistem.');
+    }
     const list = getMapelList();
     if (list.length <= 1) return alert('Minimal harus tersedia 1 Mata Pelajaran.');
     const target = document.getElementById('selectActiveMapel').value;
@@ -323,28 +415,81 @@
     const db = getDB();
     if (db.settings.subject === target) {
       db.settings.subject = updated[0];
-      saveDB(db);
+    }
+    if (db.settings.subjectConfigs && db.settings.subjectConfigs[target]) {
+      delete db.settings.subjectConfigs[target];
+    }
+    saveDB(db);
+    if (typeof setTeacherActiveSubject === 'function') {
+      setTeacherActiveSubject(updated[0], true);
     }
     saveMapelList(updated);
+    loadConfig();
+    renderQuestions();
     showCBTNotification('success', 'Mapel Dihapus', `Mata Pelajaran "${target}" berhasil dihapus.`);
   }
 
   function loadConfig() {
     const db = getDB();
+    const activeSubj = (typeof getTeacherActiveSubject === 'function')
+      ? getTeacherActiveSubject(db)
+      : (db.settings.subject || '');
+    const cfg = (typeof getSubjectConfig === 'function')
+      ? getSubjectConfig(activeSubj, db)
+      : {
+          durationMinutes: db.settings.durationMinutes || 45,
+          shuffleQuestions: db.settings.shuffleQuestions,
+          shuffleOptions: db.settings.shuffleOptions
+        };
+
     document.getElementById('cfgTitle').value = db.settings.examTitle;
-    document.getElementById('cfgDuration').value = db.settings.durationMinutes;
-    document.getElementById('cfgShuffleQ').value = String(db.settings.shuffleQuestions);
-    document.getElementById('cfgShuffleOpt').value = String(db.settings.shuffleOptions);
+    document.getElementById('cfgDuration').value = cfg.durationMinutes;
+    document.getElementById('cfgShuffleQ').value = String(cfg.shuffleQuestions);
+    document.getElementById('cfgShuffleOpt').value = String(cfg.shuffleOptions);
+
+    const cfgIndicator = document.getElementById('cfgSubjIndicator');
+    if (cfgIndicator) {
+      cfgIndicator.textContent = `Mapel: ${activeSubj || '-'} • ${cfg.durationMinutes} Menit`;
+    }
   }
 
   function saveExamConfig() {
     const db = getDB();
-    db.settings.examTitle = document.getElementById('cfgTitle').value;
-    db.settings.durationMinutes = parseInt(document.getElementById('cfgDuration').value) || 45;
-    db.settings.shuffleQuestions = document.getElementById('cfgShuffleQ').value === 'true';
-    db.settings.shuffleOptions = document.getElementById('cfgShuffleOpt').value === 'true';
-    saveDB(db);
-    alert('Pengaturan pengacakan dan durasi ujian diperbarui!');
+    const auth = getStaffAuth();
+    const activeSubj = (typeof getTeacherActiveSubject === 'function')
+      ? getTeacherActiveSubject(db)
+      : (document.getElementById('selectActiveMapel').value || db.settings.subject);
+
+    if (!activeSubj) return alert('Pilih mata pelajaran aktif terlebih dahulu!');
+
+    // Hanya Admin yang mengubah judul ujian global
+    if (!auth || auth.role === 'Admin') {
+      db.settings.examTitle = document.getElementById('cfgTitle').value;
+      saveDB(db);
+    }
+
+    const durasiMenit = parseInt(document.getElementById('cfgDuration').value) || 45;
+    const shuffleQ = document.getElementById('cfgShuffleQ').value === 'true';
+    const shuffleOpt = document.getElementById('cfgShuffleOpt').value === 'true';
+
+    if (typeof saveSubjectConfig === 'function') {
+      saveSubjectConfig(activeSubj, {
+        durationMinutes: durasiMenit,
+        shuffleQuestions: shuffleQ,
+        shuffleOptions: shuffleOpt
+      });
+    } else {
+      db.settings.durationMinutes = durasiMenit;
+      db.settings.shuffleQuestions = shuffleQ;
+      db.settings.shuffleOptions = shuffleOpt;
+      saveDB(db);
+    }
+
+    populateMapelDropdowns(true);
+    if (typeof applyRoleNavigation === 'function') {
+      applyRoleNavigation('2-bank-soal.html');
+    }
+    alert(`Durasi ${durasiMenit} menit & pengaturan pengacakan berhasil disimpan khusus untuk Mapel "${activeSubj}"!`);
   }
 
   function toggleQuestionFields() {
@@ -357,7 +502,8 @@
   function addQuestion(e) {
     e.preventDefault();
     const db = getDB();
-    const subject = document.getElementById('qSubject').value || db.settings.subject;
+    const activeSubj = (typeof getTeacherActiveSubject === 'function') ? getTeacherActiveSubject(db) : db.settings.subject;
+    const subject = document.getElementById('qSubject').value || activeSubj;
     const type = document.getElementById('qType').value;
     const text = document.getElementById('qText').value.trim();
     const weight = parseInt(document.getElementById('qWeight').value) || 10;
@@ -425,8 +571,16 @@
 
   function renderQuestions() {
     const db = getDB();
+    const auth = getStaffAuth();
+    const allowedList = getMapelList();
     const filterMapel = document.getElementById('filterMapelSoal').value;
-    const filtered = (db.questions || []).filter(q => filterMapel === 'ALL' || (q.subject || db.settings.subject) === filterMapel);
+    const filtered = (db.questions || []).filter(q => {
+      const qSubj = q.subject || db.settings.subject;
+      if (auth && auth.role === 'Guru' && allowedList.length > 0 && !allowedList.includes(qSubj)) {
+        return false;
+      }
+      return filterMapel === 'ALL' || qSubj === filterMapel;
+    });
 
     document.getElementById('qCount').textContent = filtered.length;
     const totalBobot = filtered.reduce((acc, q) => acc + (q.weight || 0), 0);
@@ -487,7 +641,8 @@
     try {
       const parsed = await parseDocxFile(file);
       const db = getDB();
-      const targetSubject = document.getElementById('qSubject').value || db.settings.subject;
+      const activeSubj = (typeof getTeacherActiveSubject === 'function') ? getTeacherActiveSubject(db) : db.settings.subject;
+      const targetSubject = document.getElementById('qSubject').value || activeSubj;
       let imported = 0;
 
       // Mode 1: Format Tabel Word (.docx)
@@ -602,31 +757,41 @@
   document.addEventListener('DOMContentLoaded', () => {
     applyRoleNavigation('2-bank-soal.html');
     const auth = getStaffAuth();
+    const isGuru = !!(auth && auth.role === 'Guru');
+
+    if (isGuru) {
+      // Kunci judul ujian global & hapus mapel agar hanya dikelola Admin
+      const cfgTitleEl = document.getElementById('cfgTitle');
+      if (cfgTitleEl) cfgTitleEl.readOnly = true;
+      const formAddMapel = document.getElementById('formAddMapel');
+      if (formAddMapel) formAddMapel.style.display = 'none';
+      const btnDelMapel = document.getElementById('btnDeleteMapel');
+      if (btnDelMapel) btnDelMapel.style.display = 'none';
+      const lblSelect = document.getElementById('labelSelectActiveMapel');
+      if (lblSelect) lblSelect.textContent = 'Pilih Mata Pelajaran Diampu (Jalur Kerja Anda)';
+    }
+
+    populateMapelDropdowns(false);
     loadConfig();
-    populateMapelDropdowns();
-    const guruSubjects = (auth && auth.role === 'Guru') ? parseSubjectsString(auth.subject) : [];
+
+    const guruSubjects = isGuru ? getMapelList() : [];
     if (guruSubjects.length > 0) {
-      const dbNow = getDB();
-      const primaryGuruMapel = guruSubjects.includes(dbNow.settings?.subject) ? dbNow.settings.subject : guruSubjects[0];
+      const primaryGuruMapel = (typeof getTeacherActiveSubject === 'function') ? getTeacherActiveSubject() : guruSubjects[0];
       const guruJenjangList = parseSubjectsString(auth.idKelas);
       const jenjangText = guruJenjangList.length > 0 ? ` | Kelas Mengajar: ${guruJenjangList.join(', ')}` : '';
       document.getElementById('guruBannerSubtitle').textContent =
-        `Panel Guru (${auth.name}) — Mata Pelajaran Diampu: ${guruSubjects.join(', ')}${jenjangText}.`;
+        `Panel Guru (${auth.name}) — Jalur Mapel Terisolasi: ${guruSubjects.join(', ')}${jenjangText}.`;
+      document.getElementById('selectActiveMapel').value = primaryGuruMapel;
       document.getElementById('qSubject').value = primaryGuruMapel;
       document.getElementById('filterMapelSoal').value = primaryGuruMapel;
       document.getElementById('btnShortcutRekapMapel').href =
         '5-penilaian-analisis.html?mapel=' + encodeURIComponent(primaryGuruMapel);
     }
+
     renderQuestions();
     syncFromMySQL(() => {
-      loadConfig();
       populateMapelDropdowns(true);
-      if (guruSubjects.length > 0) {
-        const dbSynced = getDB();
-        const primaryGuruMapel = guruSubjects.includes(dbSynced.settings?.subject) ? dbSynced.settings.subject : guruSubjects[0];
-        document.getElementById('qSubject').value = primaryGuruMapel;
-        document.getElementById('filterMapelSoal').value = primaryGuruMapel;
-      }
+      loadConfig();
       renderQuestions();
     });
   });
