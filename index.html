@@ -208,10 +208,7 @@
     const pass = document.getElementById('siswaPass').value.trim();
     const token = document.getElementById('siswaToken').value.trim().toUpperCase();
 
-    let user = (db.users || []).find(u => u.username === uname && u.password === pass && u.role === 'Siswa');
-    if (!user && uname === 'Fajar' && pass === '123') {
-      user = { id: 'USR_DUMMY_FAJAR_SISWA', username: 'Fajar', password: '123', name: 'Fajar (Mode Uji Siswa)', role: 'Siswa', kelas: 'XII-TKJ-1', idKelas: 'KLS-XII-TKJ-1', sesi: 'Sesi 1 (07:30 - 09:30)', ruang: 'Lab Komputer 1' };
-    }
+    const user = (db.users || []).find(u => u.username === uname && u.password === pass && u.role === 'Siswa');
     if (!user) return alert('Nomor peserta atau kata sandi siswa tidak ditemukan!');
     if (token !== (db.settings.activeToken || '').toUpperCase()) {
       return alert('Token sesi ujian tidak sesuai atau belum aktif!');
