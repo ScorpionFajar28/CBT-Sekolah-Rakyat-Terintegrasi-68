@@ -2,6 +2,9 @@
 // shared-cbt.js - Koneksi Cloud Real-Time Vercel <-> Supabase PostgreSQL
 // ============================================================================
 // ISI KREDENSIAL SUPABASE ANDA DI BAWAH INI (Dari Supabase: Project Settings -> API)
+// ============================================================================
+// shared-cbt.js - Koneksi Cloud Real-Time Vercel <-> Supabase PostgreSQL
+// ============================================================================
 const SUPABASE_URL = 'https://agyhebafhrctmkgwsuku.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFneWhlYmFmaHJjdG1rZ3dzdWt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0MDI1MDMsImV4cCI6MjExMDk3ODUwM30.3SohuyrPNXhHldMwCT3jBZEKhwuu1YUNla-nrfL5QpI';
 
@@ -9,15 +12,7 @@ const CACHE_KEY = 'CBT_SUPABASE_CACHE_V1';
 const CLASSES_META_KEY = 'CBT_CLASSES_META_V1';
 const IS_CONFIGURED = SUPABASE_URL.startsWith('https://') && !SUPABASE_URL.includes('GANTI-DENGAN');
 
-const DEFAULT_CLASSES_LIST = [
-  {
-    idKelas: 'KLS-XII-TKJ-1',
-    namaKelas: 'XII-TKJ-1',
-    waliKelasUsername: 'wali.tkj1',
-    waliKelasName: 'Siti Aminah, S.Pd',
-    keterangan: 'Teknik Komputer dan Jaringan'
-  }
-];
+const DEFAULT_CLASSES_LIST = [];
 
 function loadSavedClassesMeta() {
   try {
@@ -27,49 +22,36 @@ function loadSavedClassesMeta() {
       if (Array.isArray(raw)) return raw;
     }
   } catch (e) {}
-  return JSON.parse(JSON.stringify(DEFAULT_CLASSES_LIST));
+  return [];
 }
 
 let DB_CACHE = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') || {
   settings: {
     examTitle: 'Portal Aplikasi Asesmen Sumatif Akhir Semester (ASAS)',
-    subject: 'Informatika & Literasi Digital',
+    subject: '',
     durationMinutes: 45,
     activeToken: 'CBT2026',
     shuffleQuestions: true,
     shuffleOptions: true,
     showReviewAfterSubmit: true,
     maxViolations: 4,
-    subjectsList: [
-      'Informatika & Literasi Digital',
-      'Teknik Komputer dan Jaringan (TKJ)',
-      'Koding dan Kecerdasan Artifisial (KKA)'
-    ]
+    subjectsList: []
   },
   classesList: loadSavedClassesMeta(),
   users: [
-    { id: 'USR_ADMIN_FAJAR', username: 'Fajar', password: '123', name: 'Fajar Jamal, S.Kom', role: 'Admin', kelas: 'Administrator & Guru TIK', idKelas: '-', sesi: 'Sesi 1 (07:30 - 09:30)', ruang: 'Lab Komputer 1' },
-    { id: 'USR_ADMIN_1', username: 'admin', password: '123', name: 'Administrator Utama', role: 'Admin', kelas: 'Panitia Ujian', idKelas: '-', sesi: '-', ruang: '-' },
-    { id: 'USR_GURU_1', username: 'guru.rudi', password: '123', name: 'Rudi Hartono, S.Pd', role: 'Guru', kelas: 'Informatika & Literasi Digital', idKelas: '-', sesi: '-', ruang: '-' },
-    { id: 'USR_GURU_2', username: 'guru.tkj', password: '123', name: 'Fajar Jamal, S.Kom', role: 'Guru', kelas: 'Teknik Komputer dan Jaringan (TKJ)', idKelas: '-', sesi: '-', ruang: '-' },
-    { id: 'USR_WALI_1', username: 'wali.tkj1', password: '123', name: 'Siti Aminah, S.Pd', role: 'Wali Kelas', kelas: 'XII-TKJ-1', idKelas: 'KLS-XII-TKJ-1', sesi: '-', ruang: '-' },
-    { id: 'USR_SISWA_1', username: '2026001', password: '123', name: 'Ahmad Fauzi', role: 'Siswa', kelas: 'XII-TKJ-1', idKelas: 'KLS-XII-TKJ-1', sesi: 'Sesi 1 (07:30 - 09:30)', ruang: 'Lab Komputer 1' },
-    { id: 'USR_SISWA_2', username: '2026002', password: '123', name: 'Siti Nurhaliza', role: 'Siswa', kelas: 'XII-TKJ-1', idKelas: 'KLS-XII-TKJ-1', sesi: 'Sesi 1 (07:30 - 09:30)', ruang: 'Lab Komputer 1' }
-  ],
-  questions: [
     {
-      id: 'Q1_INIT', type: 'PG', subject: 'Informatika & Literasi Digital',
-      text: 'Protokol yang digunakan untuk menerjemahkan nama domain menjadi alamat IP adalah...',
-      mediaType: 'none', mediaUrl: '', options: ['DHCP', 'DNS', 'FTP', 'SMTP'], pairs: [],
-      answer: 'DNS', weight: 10, explanation: 'DNS menerjemahkan nama domain menjadi alamat IP.'
-    },
-    {
-      id: 'Q2_INIT', type: 'PG', subject: 'Teknik Komputer dan Jaringan (TKJ)',
-      text: 'Perintah pada RouterOS MikroTik untuk melihat tabel routing aktif adalah...',
-      mediaType: 'none', mediaUrl: '', options: ['/ip route print', '/ip address print', '/interface print', '/system resource print'], pairs: [],
-      answer: '/ip route print', weight: 10, explanation: 'Perintah /ip route print menampilkan daftar rute jaringan.'
+      id: 'USR_ADMIN_1',
+      username: 'admin',
+      password: '123',
+      name: 'Administrator Utama',
+      role: 'Admin',
+      kelas: 'Panitia Ujian',
+      idKelas: '-',
+      sesi: '-',
+      ruang: '-'
     }
   ],
+  questions: [],
   sessionsList: [
     { id: 'S1', name: 'Sesi 1', start: '07:30', end: '09:30', kelasAkses: 'ALL' },
     { id: 'S2', name: 'Sesi 2', start: '10:00', end: '12:00', kelasAkses: 'ALL' },
@@ -79,33 +61,14 @@ let DB_CACHE = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') || {
     { id: 'R1', name: 'Lab Komputer 1', capacity: 36, note: 'Gedung Utama Lt. 1', kelasAkses: 'ALL' },
     { id: 'R2', name: 'Lab Komputer 2', capacity: 36, note: 'Gedung Utama Lt. 2', kelasAkses: 'ALL' }
   ],
-  sessions: {
-    'Fajar': {
-      studentId: 'Fajar', name: 'Fajar (Akun Dummy)', kelas: 'XII-TKJ-1', idKelas: 'KLS-XII-TKJ-1', ruang: 'Lab Komputer 1',
-      status: 'Siap Ujian', progress: 0, violations: 0, violationLogs: [], extraMinutes: 0,
-      broadcastMsg: '', answers: {}, essayScores: {}, autoScore: 0, essayScore: 0, finalScore: 0, submittedAt: null,
-      subjectResults: {}
-    },
-    '2026001': {
-      studentId: '2026001', name: 'Ahmad Fauzi', kelas: 'XII-TKJ-1', idKelas: 'KLS-XII-TKJ-1', ruang: 'Lab Komputer 1',
-      status: 'Siap Ujian', progress: 0, violations: 0, violationLogs: [], extraMinutes: 0,
-      broadcastMsg: '', answers: {}, essayScores: {}, autoScore: 0, essayScore: 0, finalScore: 0, submittedAt: null,
-      subjectResults: {}
-    },
-    '2026002': {
-      studentId: '2026002', name: 'Siti Nurhaliza', kelas: 'XII-TKJ-1', idKelas: 'KLS-XII-TKJ-1', ruang: 'Lab Komputer 1',
-      status: 'Siap Ujian', progress: 0, violations: 0, violationLogs: [], extraMinutes: 0,
-      broadcastMsg: '', answers: {}, essayScores: {}, autoScore: 0, essayScore: 0, finalScore: 0, submittedAt: null,
-      subjectResults: {}
-    }
-  }
+  sessions: {}
 };
 
 if (!Array.isArray(DB_CACHE.classesList)) {
   DB_CACHE.classesList = loadSavedClassesMeta();
 }
 
-// Pastikan akun Administrator bawaan (admin / 123 & Fajar / 123) selalu tersedia
+// Pastikan akun Administrator bawaan (admin / 123) selalu tersedia
 if (DB_CACHE && Array.isArray(DB_CACHE.users)) {
   if (!DB_CACHE.users.some(u => u.username === 'admin')) {
     DB_CACHE.users.unshift({
