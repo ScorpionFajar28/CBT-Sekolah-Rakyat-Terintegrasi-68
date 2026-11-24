@@ -7,18 +7,18 @@
 CREATE TABLE IF NOT EXISTS public.cbt_settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
   exam_title TEXT NOT NULL DEFAULT 'Portal Aplikasi Asesmen Sumatif Akhir Semester (ASAS)',
-  subject TEXT NOT NULL DEFAULT 'Informatika & Literasi Digital',
+  subject TEXT NOT NULL DEFAULT '',
   duration_minutes INTEGER NOT NULL DEFAULT 45,
   active_token TEXT NOT NULL DEFAULT 'CBT2026',
   shuffle_questions BOOLEAN NOT NULL DEFAULT TRUE,
   shuffle_options BOOLEAN NOT NULL DEFAULT TRUE,
   show_review_after_submit BOOLEAN NOT NULL DEFAULT TRUE,
   max_violations INTEGER NOT NULL DEFAULT 4,
-  subjects_list JSONB NOT NULL DEFAULT '["Informatika & Literasi Digital", "Teknik Komputer dan Jaringan (TKJ)", "Koding dan Kecerdasan Artifisial (KKA)"]'::jsonb,
+  subjects_list JSONB NOT NULL DEFAULT '[]'::jsonb,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE public.cbt_settings ADD COLUMN IF NOT EXISTS subjects_list JSONB NOT NULL DEFAULT '["Informatika & Literasi Digital", "Teknik Komputer dan Jaringan (TKJ)", "Koding dan Kecerdasan Artifisial (KKA)"]'::jsonb;
+ALTER TABLE public.cbt_settings ADD COLUMN IF NOT EXISTS subjects_list JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 
 -- 2. Tabel Pengguna (Admin, Guru, Wali Kelas, Siswa, Proktor)
@@ -77,12 +77,9 @@ CREATE TABLE IF NOT EXISTS public.cbt_sessions (
   final_score NUMERIC(6,2) DEFAULT 0,
   submitted_at TEXT DEFAULT NULL,
   subject_results JSONB DEFAULT '{}'::jsonb,
-  subjects_list JSONB NOT NULL DEFAULT '["Informatika & Literasi Digital", "Teknik Komputer dan Jaringan (TKJ)", "Koding dan Kecerdasan Artifisial (KKA)"]'::jsonb,
+  subjects_list JSONB NOT NULL DEFAULT '[]'::jsonb,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-ALTER TABLE public.cbt_settings ADD COLUMN IF NOT EXISTS subjects_list JSONB NOT NULL DEFAULT '["Informatika & Literasi Digital", "Teknik Komputer dan Jaringan (TKJ)", "Koding dan Kecerdasan Artifisial (KKA)"]'::jsonb;
-
 
 ALTER TABLE public.cbt_sessions ADD COLUMN IF NOT EXISTS id_kelas TEXT DEFAULT '-';
 ALTER TABLE public.cbt_sessions ADD COLUMN IF NOT EXISTS subject_results JSONB DEFAULT '{}'::jsonb;
@@ -125,34 +122,14 @@ ALTER TABLE public.cbt_sessions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cbt_exam_spaces DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cbt_classes DISABLE ROW LEVEL SECURITY;
 
--- Data Awal Bawaan
-INSERT INTO public.cbt_settings (id, exam_title, subject, duration_minutes, active_token)
-VALUES (1, 'Portal Aplikasi Asesmen Sumatif Akhir Semester (ASAS)', 'Informatika & Literasi Digital', 45, 'CBT2026')
+-- Data Awal Bawaan (Hanya Akun Admin & Master Ruang/Sesi)
+INSERT INTO public.cbt_settings (id, exam_title, subject, duration_minutes, active_token, subjects_list)
+VALUES (1, 'Portal Aplikasi Asesmen Sumatif Akhir Semester (ASAS)', '', 45, 'CBT2026', '[]'::jsonb)
 ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO public.cbt_classes (id_kelas, nama_kelas, wali_kelas_username, wali_kelas_name, keterangan) VALUES
-  ('KLS-XII-TKJ-1', 'XII-TKJ-1', 'wali.tkj1', 'Siti Aminah, S.Pd', 'Teknik Komputer dan Jaringan')
-ON CONFLICT (id_kelas) DO NOTHING;
 
 INSERT INTO public.cbt_users (id, username, password, name, role, kelas, id_kelas, sesi, ruang) VALUES
-  ('USR_ADMIN_FAJAR', 'Fajar', '123', 'Fajar Jamal, S.Kom', 'Admin', 'Administrator & Guru TIK', '-', 'Sesi 1 (07:30 - 09:30)', 'Lab Komputer 1'),
-  ('USR_ADMIN_1', 'admin', '123', 'Administrator Utama', 'Admin', 'Panitia Ujian', '-', '-', '-'),
-  ('USR_GURU_1', 'guru.rudi', '123', 'Rudi Hartono, S.Pd', 'Guru', 'Informatika & Literasi Digital', '-', '-', '-'),
-  ('USR_WALI_1', 'wali.tkj1', '123', 'Siti Aminah, S.Pd', 'Wali Kelas', 'XII-TKJ-1', 'KLS-XII-TKJ-1', '-', '-'),
-  ('USR_PROK_1', 'proktor1', '123', 'Pengawas Lab 1', 'Proktor', 'Pengawas Ruang', '-', 'Sesi 1 (07:30 - 09:30)', 'Lab Komputer 1'),
-  ('USR_SISWA_1', '2026001', '123', 'Ahmad Fauzi', 'Siswa', 'XII-TKJ-1', 'KLS-XII-TKJ-1', 'Sesi 1 (07:30 - 09:30)', 'Lab Komputer 1'),
-  ('USR_SISWA_2', '2026002', '123', 'Siti Nurhaliza', 'Siswa', 'XII-TKJ-1', 'KLS-XII-TKJ-1', 'Sesi 1 (07:30 - 09:30)', 'Lab Komputer 1')
+  ('USR_ADMIN_1', 'admin', '123', 'Administrator Utama', 'Admin', 'Panitia Ujian', '-', '-', '-')
 ON CONFLICT (username) DO NOTHING;
-
-INSERT INTO public.cbt_questions (id, type, subject, text, options, answer, weight, explanation) VALUES
-  ('Q1_INIT', 'PG', 'Informatika & Literasi Digital', 'Protokol yang digunakan untuk menerjemahkan nama domain menjadi alamat IP adalah...', '["DHCP", "DNS", "FTP", "SMTP"]'::jsonb, 'DNS', 10, 'DNS (Domain Name System) menerjemahkan nama domain menjadi alamat IP.'),
-  ('Q2_INIT', 'BS', 'Informatika & Literasi Digital', 'Alamat IP 192.168.1.1 termasuk dalam kategori alamat IP Privat (RFC 1918).', '["Benar", "Salah"]'::jsonb, 'Benar', 10, 'Blok 192.168.0.0/16 merupakan alamat IP privat untuk jaringan lokal.')
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO public.cbt_sessions (student_id, name, kelas, id_kelas, ruang, status) VALUES
-  ('2026001', 'Ahmad Fauzi', 'XII-TKJ-1', 'KLS-XII-TKJ-1', 'Lab Komputer 1', 'Siap Ujian'),
-  ('2026002', 'Siti Nurhaliza', 'XII-TKJ-1', 'KLS-XII-TKJ-1', 'Lab Komputer 1', 'Siap Ujian')
-ON CONFLICT (student_id) DO NOTHING;
 
 INSERT INTO public.cbt_exam_spaces (id, category, name, start_time, end_time, capacity, note, kelas_akses) VALUES
   ('S1', 'SESSION', 'Sesi 1', '07:30', '09:30', 0, 'Sesi Pagi', 'ALL'),
