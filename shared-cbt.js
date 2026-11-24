@@ -1,5 +1,6 @@
 // ============================================================================
 // shared-cbt.js - Koneksi Cloud Real-Time Vercel <-> Supabase PostgreSQL
+// Dilengkapi Jalur Terisolasi Per Akun Guru & Per Mata Pelajaran (Anti-Bentrok)
 // ============================================================================
 // ISI KREDENSIAL SUPABASE ANDA DI BAWAH INI (Dari Supabase: Project Settings -> API)
 const SUPABASE_URL = 'https://agyhebafhrctmkgwsuku.supabase.co';
@@ -7,6 +8,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const CACHE_KEY = 'CBT_SUPABASE_CACHE_V1';
 const CLASSES_META_KEY = 'CBT_CLASSES_META_V1';
+const TEACHER_ACTIVE_SUBJECT_KEY = 'CBT_TEACHER_ACTIVE_SUBJECT_V1';
+const SUBJECT_CONFIGS_META_KEY = 'CBT_SUBJECT_CONFIGS_V1';
 const IS_CONFIGURED = SUPABASE_URL.startsWith('https://') && !SUPABASE_URL.includes('GANTI-DENGAN');
 
 const DEFAULT_CLASSES_LIST = [];
@@ -22,6 +25,17 @@ function loadSavedClassesMeta() {
   return [];
 }
 
+function loadSavedSubjectConfigsMeta() {
+  try {
+    const rawStr = localStorage.getItem(SUBJECT_CONFIGS_META_KEY);
+    if (rawStr !== null) {
+      const raw = JSON.parse(rawStr);
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
+    }
+  } catch (e) {}
+  return {};
+}
+
 let DB_CACHE = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') || {
   settings: {
     examTitle: 'Portal Aplikasi Asesmen Sumatif Akhir Semester (ASAS)',
@@ -32,7 +46,8 @@ let DB_CACHE = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') || {
     shuffleOptions: true,
     showReviewAfterSubmit: true,
     maxViolations: 4,
-    subjectsList: []
+    subjectsList: [],
+    subjectConfigs: loadSavedSubjectConfigsMeta()
   },
   classesList: loadSavedClassesMeta(),
   users: [
@@ -63,6 +78,9 @@ let DB_CACHE = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') || {
 
 if (!Array.isArray(DB_CACHE.classesList)) {
   DB_CACHE.classesList = loadSavedClassesMeta();
+}
+if (!DB_CACHE.settings.subjectConfigs || typeof DB_CACHE.settings.subjectConfigs !== 'object') {
+  DB_CACHE.settings.subjectConfigs = loadSavedSubjectConfigsMeta();
 }
 
 // Pastikan akun Administrator bawaan (admin / 123) selalu tersedia
@@ -182,6 +200,7 @@ async function syncFromMySQL(callback) {
         show_review_after_submit: DB_CACHE.settings.showReviewAfterSubmit,
         max_violations: DB_CACHE.settings.maxViolations,
         subjects_list: getAllSubjectsList(DB_CACHE),
+        subject_configs: DB_CACHE.settings.subjectConfigs || {},
         updated_at: new Date().toISOString()
       });
     }
@@ -198,6 +217,17 @@ async function syncFromMySQL(callback) {
     if (mergedMapelList.length > 0) {
       localStorage.setItem('CBT_MAPEL_LIST_V1', JSON.stringify(mergedMapelList));
     }
+
+    // Gabungkan konfigurasi per mata pelajaran (subject_configs) agar durasi/aturan tiap mapel terpisah
+    const parsedDbSubjectConfigs = (sRow.subject_configs && typeof sRow.subject_configs === 'object' && !Array.isArray(sRow.subject_configs))
+      ? sRow.subject_configs
+      : (typeof sRow.subject_configs === 'string' ? (() => { try { return JSON.parse(sRow.subject_configs); } catch(e) { return {}; } })() : {});
+    const mergedSubjectConfigs = {
+      ...loadSavedSubjectConfigsMeta(),
+      ...(DB_CACHE.settings?.subjectConfigs || {}),
+      ...parsedDbSubjectConfigs
+    };
+    localStorage.setItem(SUBJECT_CONFIGS_META_KEY, JSON.stringify(mergedSubjectConfigs));
 
     const sessionsMap = {};
     (sesRows || []).forEach(r => {
@@ -226,14 +256,15 @@ async function syncFromMySQL(callback) {
     DB_CACHE = {
       settings: {
         examTitle: sRow.exam_title || DB_CACHE.settings.examTitle,
-        subject: sRow.subject || DB_CACHE.settings.subject,
+        subject: sRow.subject !== undefined ? sRow.subject : DB_CACHE.settings.subject,
         durationMinutes: Number(sRow.duration_minutes || 45),
         activeToken: sRow.active_token || 'CBT2026',
         shuffleQuestions: sRow.shuffle_questions !== false,
         shuffleOptions: sRow.shuffle_options !== false,
         showReviewAfterSubmit: sRow.show_review_after_submit !== false,
         maxViolations: Number(sRow.max_violations || 4),
-        subjectsList: mergedMapelList.length > 0 ? mergedMapelList : getAllSubjectsList(DB_CACHE)
+        subjectsList: mergedMapelList.length > 0 ? mergedMapelList : getAllSubjectsList(DB_CACHE),
+        subjectConfigs: mergedSubjectConfigs
       },
       classesList,
       users: (usrRows || []).map(u => {
@@ -315,7 +346,7 @@ async function syncSessionsForProctor(callback) {
   if (_cloudSaveTimer !== null) return;
   try {
     const [resSet, resSes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/cbt_settings?id=eq.1&select=active_token,duration_minutes,max_violations`, { headers: sbHeaders() }),
+      fetch(`${SUPABASE_URL}/rest/v1/cbt_settings?id=eq.1&select=active_token,duration_minutes,max_violations,subject,subject_configs`, { headers: sbHeaders() }),
       fetch(`${SUPABASE_URL}/rest/v1/cbt_sessions?select=*`, { headers: sbHeaders() })
     ]);
     if (!resSet.ok || !resSes.ok) return;
@@ -324,6 +355,10 @@ async function syncSessionsForProctor(callback) {
       DB_CACHE.settings.activeToken = setRows[0].active_token || DB_CACHE.settings.activeToken;
       DB_CACHE.settings.durationMinutes = Number(setRows[0].duration_minutes || DB_CACHE.settings.durationMinutes);
       DB_CACHE.settings.maxViolations = Number(setRows[0].max_violations || DB_CACHE.settings.maxViolations);
+      if (setRows[0].subject !== undefined) DB_CACHE.settings.subject = setRows[0].subject;
+      if (setRows[0].subject_configs && typeof setRows[0].subject_configs === 'object') {
+        DB_CACHE.settings.subjectConfigs = { ...(DB_CACHE.settings.subjectConfigs || {}), ...setRows[0].subject_configs };
+      }
     }
     const classesList = getClassesList(DB_CACHE);
     const sessionsMap = {};
@@ -403,15 +438,24 @@ async function sbUpsert(table, payload, keepalive = false) {
         keepalive
       });
     }
-    if (!res.ok && table === 'cbt_settings' && payload && Object.prototype.hasOwnProperty.call(payload, 'subjects_list')) {
+    if (!res.ok && table === 'cbt_settings') {
       const fallbackSettings = { ...payload };
-      delete fallbackSettings.subjects_list;
-      await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      delete fallbackSettings.subject_configs;
+      const res2 = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
         method: 'POST',
         headers: sbHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
         body: JSON.stringify(fallbackSettings),
         keepalive
       });
+      if (!res2.ok && Object.prototype.hasOwnProperty.call(fallbackSettings, 'subjects_list')) {
+        delete fallbackSettings.subjects_list;
+        await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+          method: 'POST',
+          headers: sbHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+          body: JSON.stringify(fallbackSettings),
+          keepalive
+        });
+      }
     }
   } catch (e) {
     console.error(`Gagal menyimpan ke Supabase (${table}):`, e);
@@ -440,9 +484,14 @@ function flushCloudSave(keepalive = false) {
   const db = DB_CACHE;
   const prev = DB_LAST_SYNCED_SNAPSHOT || {};
 
-  // 1. Settings (termasuk subjects_list)
+  // 1. Settings (termasuk subjects_list dan subject_configs per mata pelajaran)
   const currentSubjectsList = Array.isArray(db.settings.subjectsList) ? db.settings.subjectsList : getAllSubjectsList(db);
-  if (JSON.stringify(prev.settings) !== JSON.stringify(db.settings) || JSON.stringify(prev.settings?.subjectsList) !== JSON.stringify(currentSubjectsList)) {
+  const currentSubjectConfigs = (db.settings.subjectConfigs && typeof db.settings.subjectConfigs === 'object') ? db.settings.subjectConfigs : {};
+  if (
+    JSON.stringify(prev.settings) !== JSON.stringify(db.settings) ||
+    JSON.stringify(prev.settings?.subjectsList) !== JSON.stringify(currentSubjectsList) ||
+    JSON.stringify(prev.settings?.subjectConfigs) !== JSON.stringify(currentSubjectConfigs)
+  ) {
     sbUpsert('cbt_settings', {
       id: 1,
       exam_title: db.settings.examTitle,
@@ -454,6 +503,7 @@ function flushCloudSave(keepalive = false) {
       show_review_after_submit: db.settings.showReviewAfterSubmit,
       max_violations: db.settings.maxViolations,
       subjects_list: currentSubjectsList,
+      subject_configs: currentSubjectConfigs,
       updated_at: new Date().toISOString()
     }, keepalive);
   }
@@ -613,6 +663,9 @@ function saveDB(db, options = {}) {
   if (Array.isArray(db.classesList)) {
     localStorage.setItem(CLASSES_META_KEY, JSON.stringify(db.classesList));
   }
+  if (db.settings && db.settings.subjectConfigs && typeof db.settings.subjectConfigs === 'object') {
+    localStorage.setItem(SUBJECT_CONFIGS_META_KEY, JSON.stringify(db.settings.subjectConfigs));
+  }
   localStorage.setItem(CACHE_KEY, JSON.stringify(db));
   if (!IS_CONFIGURED) return;
 
@@ -634,6 +687,148 @@ if (typeof window !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushCloudSave(true);
   });
+}
+
+// ============================================================================
+// JALUR ISOLASI PER AKUN GURU & PER MATA PELAJARAN (ANTI-BENTROK)
+// ============================================================================
+
+/**
+ * Mengambil daftar mata pelajaran yang boleh diakses oleh akun yang sedang login.
+ * - Jika Role = Guru: Hanya mapel yang diampu oleh guru tersebut.
+ * - Jika Role = Admin: Semua mapel yang terdaftar di sistem.
+ */
+function getAllowedSubjectsForCurrentUser(db = getDB()) {
+  const allSubjects = getAllSubjectsList(db);
+  const auth = getStaffAuth();
+  if (!auth || auth.role !== 'Guru') return allSubjects;
+
+  const liveUser = (db.users || []).find(u => u.id === auth.id || u.username === auth.username);
+  const rawMapel = (liveUser && liveUser.kelas) || auth.subject || auth.kelas || '';
+  const guruMapels = parseSubjectsString(rawMapel);
+  return guruMapels.length > 0 ? guruMapels : allSubjects;
+}
+
+/**
+ * Mengambil Mata Pelajaran Aktif khusus untuk sesi login guru/admin di perangkat ini.
+ * Disimpan per-sesi (sessionStorage) sehingga ketika Guru A memilih Mapel A,
+ * dropdown & pembuatan soal milik Guru B di perangkat lain TIDAK ikut berubah/bentrok.
+ */
+function getTeacherActiveSubject(db = getDB()) {
+  const auth = getStaffAuth();
+  const userKey = auth ? `${TEACHER_ACTIVE_SUBJECT_KEY}_${auth.username}` : TEACHER_ACTIVE_SUBJECT_KEY;
+  const sessionSelected = (sessionStorage.getItem(userKey) || '').trim();
+  const allowed = getAllowedSubjectsForCurrentUser(db);
+
+  if (auth && auth.role === 'Guru') {
+    if (sessionSelected && (allowed.length === 0 || allowed.includes(sessionSelected))) {
+      return sessionSelected;
+    }
+    const fallback = allowed[0] || '';
+    if (fallback) sessionStorage.setItem(userKey, fallback);
+    return fallback;
+  }
+
+  if (sessionSelected) return sessionSelected;
+  return (db.settings && db.settings.subject) || allowed[0] || '';
+}
+
+/**
+ * Mengatur Mata Pelajaran Aktif untuk sesi kerja guru/admin saat ini.
+ * - Untuk Guru: Hanya memperbarui jalur kerja pribadi di sessionStorage (tidak menimpa mapel aktif guru lain).
+ * - Untuk Admin: Memperbarui jalur kerja sekaligus menyetel mapel aktif ujian global jika diminta.
+ */
+function setTeacherActiveSubject(subjectName, setAsGlobalExamSubject = false) {
+  const cleanSubj = String(subjectName || '').trim();
+  if (!cleanSubj) return '';
+
+  const auth = getStaffAuth();
+  const userKey = auth ? `${TEACHER_ACTIVE_SUBJECT_KEY}_${auth.username}` : TEACHER_ACTIVE_SUBJECT_KEY;
+  sessionStorage.setItem(userKey, cleanSubj);
+
+  const db = getDB();
+  db.settings = db.settings || {};
+  db.settings.subjectConfigs = db.settings.subjectConfigs || {};
+
+  // Pastikan slot konfigurasi mandiri untuk mapel ini sudah tersedia
+  if (!db.settings.subjectConfigs[cleanSubj]) {
+    db.settings.subjectConfigs[cleanSubj] = {
+      durationMinutes: Number(db.settings.durationMinutes || 45),
+      shuffleQuestions: db.settings.shuffleQuestions !== false,
+      shuffleOptions: db.settings.shuffleOptions !== false,
+      showReviewAfterSubmit: db.settings.showReviewAfterSubmit !== false,
+      maxViolations: Number(db.settings.maxViolations || 4),
+      updatedBy: auth ? auth.username : 'system',
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  // Hanya Admin (atau opsi eksplisit) yang mengubah mapel ujian global untuk siswa
+  if ((!auth || auth.role === 'Admin') && setAsGlobalExamSubject) {
+    db.settings.subject = cleanSubj;
+  }
+
+  saveDB(db);
+  return cleanSubj;
+}
+
+/**
+ * Mengambil konfigurasi spesifik per Mata Pelajaran (menit soal, acak soal, acak opsi, dll).
+ * Setiap mata pelajaran punya penyimpanan durasi/menit sendiri sehingga tidak saling timpa.
+ */
+function getSubjectConfig(subjectName, db = getDB()) {
+  const targetSubj = String(subjectName || getTeacherActiveSubject(db) || db.settings?.subject || '').trim();
+  const configs = (db.settings && db.settings.subjectConfigs) || {};
+  const specific = (targetSubj && configs[targetSubj]) ? configs[targetSubj] : {};
+
+  return {
+    subject: targetSubj,
+    durationMinutes: Number(specific.durationMinutes || db.settings?.durationMinutes || 45),
+    shuffleQuestions: specific.shuffleQuestions !== undefined ? Boolean(specific.shuffleQuestions) : (db.settings?.shuffleQuestions !== false),
+    shuffleOptions: specific.shuffleOptions !== undefined ? Boolean(specific.shuffleOptions) : (db.settings?.shuffleOptions !== false),
+    showReviewAfterSubmit: specific.showReviewAfterSubmit !== undefined ? Boolean(specific.showReviewAfterSubmit) : (db.settings?.showReviewAfterSubmit !== false),
+    maxViolations: Number(specific.maxViolations || db.settings?.maxViolations || 4),
+    updatedBy: specific.updatedBy || '-'
+  };
+}
+
+/**
+ * Menyimpan durasi menit & pengaturan khusus untuk 1 Mata Pelajaran tertentu
+ * tanpa mengubah menit soal mata pelajaran milik guru lain.
+ */
+function saveSubjectConfig(subjectName, updates = {}) {
+  const targetSubj = String(subjectName || getTeacherActiveSubject() || '').trim();
+  if (!targetSubj) return null;
+
+  const db = getDB();
+  const auth = getStaffAuth();
+  db.settings = db.settings || {};
+  db.settings.subjectConfigs = db.settings.subjectConfigs || {};
+
+  const prevCfg = getSubjectConfig(targetSubj, db);
+  const nextCfg = {
+    durationMinutes: updates.durationMinutes !== undefined ? Math.max(1, Number(updates.durationMinutes)) : prevCfg.durationMinutes,
+    shuffleQuestions: updates.shuffleQuestions !== undefined ? Boolean(updates.shuffleQuestions) : prevCfg.shuffleQuestions,
+    shuffleOptions: updates.shuffleOptions !== undefined ? Boolean(updates.shuffleOptions) : prevCfg.shuffleOptions,
+    showReviewAfterSubmit: updates.showReviewAfterSubmit !== undefined ? Boolean(updates.showReviewAfterSubmit) : prevCfg.showReviewAfterSubmit,
+    maxViolations: updates.maxViolations !== undefined ? Math.max(1, Number(updates.maxViolations)) : prevCfg.maxViolations,
+    updatedBy: auth ? `${auth.name} (${auth.username})` : 'Admin',
+    updatedAt: new Date().toISOString()
+  };
+
+  db.settings.subjectConfigs[targetSubj] = nextCfg;
+
+  // Jika mapel ini kebetulan sedang menjadi mapel aktif ujian global, selaraskan juga fallback-nya
+  if (db.settings.subject === targetSubj) {
+    db.settings.durationMinutes = nextCfg.durationMinutes;
+    db.settings.shuffleQuestions = nextCfg.shuffleQuestions;
+    db.settings.shuffleOptions = nextCfg.shuffleOptions;
+    db.settings.showReviewAfterSubmit = nextCfg.showReviewAfterSubmit;
+    db.settings.maxViolations = nextCfg.maxViolations;
+  }
+
+  saveDB(db);
+  return nextCfg;
 }
 
 // ============================================================================
@@ -667,6 +862,9 @@ function getAllSubjectsList(db = getDB()) {
   if (db.settings && db.settings.subject) set.add(db.settings.subject);
   if (Array.isArray(db.settings?.subjectsList)) {
     db.settings.subjectsList.forEach(m => { if (m) set.add(m); });
+  }
+  if (db.settings?.subjectConfigs && typeof db.settings.subjectConfigs === 'object') {
+    Object.keys(db.settings.subjectConfigs).forEach(m => { if (m) set.add(m); });
   }
   (db.questions || []).forEach(q => { if (q.subject) set.add(q.subject); });
   (db.users || []).forEach(u => {
@@ -869,8 +1067,13 @@ function applyRoleNavigation(activeFile) {
 
     const guruMapels = parseSubjectsString((liveUser && liveUser.kelas) || auth.subject);
     const guruJenjang = parseSubjectsString((liveUser && liveUser.idKelas) || auth.idKelas);
+    const activeTeacherSubj = getTeacherActiveSubject(dbNow);
     const mapelDisplay = guruMapels.length > 0
-      ? guruMapels.map(m => `<div style="margin-top:2px;">• <strong style="color:#fff;">${m}</strong></div>`).join('')
+      ? guruMapels.map(m => {
+          const isAct = m === activeTeacherSubj;
+          const cfg = getSubjectConfig(m, dbNow);
+          return `<div style="margin-top:2px; ${isAct ? 'background:rgba(255,255,255,0.16); padding:2px 6px; border-radius:6px;' : ''}">• <strong style="color:${isAct ? '#fde047' : '#fff'};">${m}</strong> <span style="font-size:0.68rem; color:#fbcfe8;">(${cfg.durationMinutes} mnt)</span></div>`;
+        }).join('')
       : '';
     const jenjangDisplay = guruJenjang.length > 0
       ? `<div style="margin-top:0.4rem; padding-top:0.35rem; border-top:1px dashed rgba(255,255,255,0.28);"><i class="fa-solid fa-layer-group" style="margin-right:5px;"></i>Kelas Mengajar:<br><strong style="color:#fde047;">${guruJenjang.join(', ')}</strong></div>`
@@ -884,7 +1087,7 @@ function applyRoleNavigation(activeFile) {
             <div style="font-size:0.69rem; color:#fbcfe8;">NIP/User: ${auth.username}</div>
           </div>
         </div>
-        ${guruMapels.length > 0 ? `<div><i class="fa-solid fa-book-bookmark" style="margin-right:5px;"></i>Mapel Guru (${guruMapels.length}):${mapelDisplay}</div>` : ''}
+        ${guruMapels.length > 0 ? `<div><i class="fa-solid fa-book-bookmark" style="margin-right:5px;"></i>Jalur Mapel Guru (${guruMapels.length}):${mapelDisplay}</div>` : ''}
         ${jenjangDisplay}
       </div>
     `;
@@ -925,7 +1128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof populateSesiAndRoomSelects === 'function') populateSesiAndRoomSelects();
     if (typeof renderSesiAndRooms === 'function') renderSesiAndRooms();
     const activeElId = document.activeElement ? document.activeElement.id : '';
-    const isEditingCfg = ['cfgTitle', 'cfgDuration', 'cfgShuffleQ', 'cfgShuffleOpt'].includes(activeElId);
+    const isEditingCfg = ['cfgTitle', 'cfgDuration', 'cfgSubject', 'cfgShuffleQ', 'cfgShuffleOpt'].includes(activeElId);
     if (typeof loadConfig === 'function' && !isEditingCfg) loadConfig();
     if (typeof populateMapelDropdowns === 'function') populateMapelDropdowns(true);
     if (typeof renderQuestions === 'function') renderQuestions();
