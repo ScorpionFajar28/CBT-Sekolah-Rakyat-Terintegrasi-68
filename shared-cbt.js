@@ -39,7 +39,12 @@ let DB_CACHE = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') || {
     shuffleQuestions: true,
     shuffleOptions: true,
     showReviewAfterSubmit: true,
-    maxViolations: 4
+    maxViolations: 4,
+    subjectsList: [
+      'Informatika & Literasi Digital',
+      'Teknik Komputer dan Jaringan (TKJ)',
+      'Koding dan Kecerdasan Artifisial (KKA)'
+    ]
   },
   classesList: loadSavedClassesMeta(),
   users: [
@@ -134,6 +139,8 @@ async function syncFromMySQL(callback) {
     return;
   }
 
+  if (_cloudSaveTimer !== null) return;
+
   try {
     const [resSet, resUsr, resQue, resSes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/cbt_settings?id=eq.1&select=*`, { headers: sbHeaders() }),
@@ -203,8 +210,15 @@ async function syncFromMySQL(callback) {
     } catch (e) {}
 
     const sRow = setRows[0] || {};
-    if (Array.isArray(sRow.subjects_list) && sRow.subjects_list.length > 0) {
-      localStorage.setItem('CBT_MAPEL_LIST_V1', JSON.stringify(sRow.subjects_list));
+    const localSavedMapel = JSON.parse(localStorage.getItem('CBT_MAPEL_LIST_V1') || '[]');
+    const mergedMapelSet = new Set([
+      ...(Array.isArray(sRow.subjects_list) ? sRow.subjects_list : []),
+      ...(Array.isArray(localSavedMapel) ? localSavedMapel : []),
+      ...(sRow.subject ? [sRow.subject] : [])
+    ]);
+    const mergedMapelList = Array.from(mergedMapelSet).filter(Boolean);
+    if (mergedMapelList.length > 0) {
+      localStorage.setItem('CBT_MAPEL_LIST_V1', JSON.stringify(mergedMapelList));
     }
 
     const sessionsMap = {};
@@ -241,7 +255,7 @@ async function syncFromMySQL(callback) {
         shuffleOptions: sRow.shuffle_options !== false,
         showReviewAfterSubmit: sRow.show_review_after_submit !== false,
         maxViolations: Number(sRow.max_violations || 4),
-        subjectsList: Array.isArray(sRow.subjects_list) ? sRow.subjects_list : getAllSubjectsList(DB_CACHE)
+        subjectsList: mergedMapelList.length > 0 ? mergedMapelList : getAllSubjectsList(DB_CACHE)
       },
       classesList,
       users: (usrRows || []).map(u => {
@@ -283,7 +297,6 @@ async function syncSessionOnly(studentId, callback) {
     if (typeof callback === 'function') callback(DB_CACHE.sessions[studentId] || null);
     return;
   }
-  // Jangan timpa sesi lokal jika masih ada jawaban tertunda yang sedang di-debounce
   if (_cloudSaveTimer !== null) return;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/cbt_sessions?student_id=eq.${encodeURIComponent(studentId)}&select=*`, { headers: sbHeaders() });
@@ -409,6 +422,16 @@ async function sbUpsert(table, payload, keepalive = false) {
         method: 'POST',
         headers: sbHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
         body: JSON.stringify(fallbackPayload),
+        keepalive
+      });
+    }
+    if (!res.ok && table === 'cbt_settings' && payload && Object.prototype.hasOwnProperty.call(payload, 'subjects_list')) {
+      const fallbackSettings = { ...payload };
+      delete fallbackSettings.subjects_list;
+      await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: sbHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+        body: JSON.stringify(fallbackSettings),
         keepalive
       });
     }
@@ -668,6 +691,9 @@ function getAllSubjectsList(db = getDB()) {
     'Koding dan Kecerdasan Artifisial (KKA)'
   ]);
   if (db.settings && db.settings.subject) set.add(db.settings.subject);
+  if (Array.isArray(db.settings?.subjectsList)) {
+    db.settings.subjectsList.forEach(m => { if (m) set.add(m); });
+  }
   (db.questions || []).forEach(q => { if (q.subject) set.add(q.subject); });
   (db.users || []).forEach(u => {
     if (u.role === 'Guru' && u.kelas && u.kelas !== '-') {
@@ -925,7 +951,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof populateSesiAndRoomSelects === 'function') populateSesiAndRoomSelects();
     if (typeof renderSesiAndRooms === 'function') renderSesiAndRooms();
     if (typeof loadConfig === 'function') loadConfig();
-    if (typeof populateMapelDropdowns === 'function') populateMapelDropdowns();
+    if (typeof populateMapelDropdowns === 'function') populateMapelDropdowns(true);
     if (typeof renderQuestions === 'function') renderQuestions();
     if (typeof renderProctoring === 'function') renderProctoring();
     if (typeof renderGrades === 'function') renderGrades();
