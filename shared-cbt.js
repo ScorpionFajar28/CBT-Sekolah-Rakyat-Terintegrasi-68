@@ -2,9 +2,6 @@
 // shared-cbt.js - Koneksi Cloud Real-Time Vercel <-> Supabase PostgreSQL
 // ============================================================================
 // ISI KREDENSIAL SUPABASE ANDA DI BAWAH INI (Dari Supabase: Project Settings -> API)
-// ============================================================================
-// shared-cbt.js - Koneksi Cloud Real-Time Vercel <-> Supabase PostgreSQL
-// ============================================================================
 const SUPABASE_URL = 'https://agyhebafhrctmkgwsuku.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFneWhlYmFmaHJjdG1rZ3dzdWt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0MDI1MDMsImV4cCI6MjExMDk3ODUwM30.3SohuyrPNXhHldMwCT3jBZEKhwuu1YUNla-nrfL5QpI';
 
@@ -666,11 +663,7 @@ function parseSubjectsString(rawStr) {
 
 function getAllSubjectsList(db = getDB()) {
   const saved = JSON.parse(localStorage.getItem('CBT_MAPEL_LIST_V1') || 'null');
-  const set = new Set(saved || [
-    'Informatika & Literasi Digital',
-    'Teknik Komputer dan Jaringan (TKJ)',
-    'Koding dan Kecerdasan Artifisial (KKA)'
-  ]);
+  const set = new Set(Array.isArray(saved) ? saved : []);
   if (db.settings && db.settings.subject) set.add(db.settings.subject);
   if (Array.isArray(db.settings?.subjectsList)) {
     db.settings.subjectsList.forEach(m => { if (m) set.add(m); });
@@ -747,7 +740,7 @@ function getStudentsByClassId(idKelas, db = getDB()) {
 
 // Helper: Hitung & Ambil Rekap Nilai per Mata Pelajaran untuk setiap peserta
 function getStudentSubjectMetrics(session, subjectName, db = getDB()) {
-  const defaultSubj = db.settings?.subject || 'Informatika & Literasi Digital';
+  const defaultSubj = db.settings?.subject || '';
   const subjQuestions = (db.questions || []).filter(q => (q.subject || defaultSubj) === subjectName);
 
   const savedRes = (session.subjectResults && session.subjectResults[subjectName]) || null;
