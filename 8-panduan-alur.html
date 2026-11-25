@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panduan &amp; Alur CBT - CBT SRT 68 Luwu Utara V.2.5</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="shared-cbt.css">
+  <style>
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .flow-step {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.1rem;
+      box-shadow: 0 2px 8px rgba(80, 7, 36, 0.05);
+    }
+    .flow-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+    .role-guide-card {
+      border-left: 4px solid var(--primary);
+      background: #fdf2f8;
+      padding: 1rem 1.2rem;
+      border-radius: 10px;
+      margin-bottom: 0.9rem;
+    }
+    .role-guide-card h4 {
+      margin: 0 0 0.4rem 0;
+      color: var(--primary-dark);
+      font-size: 0.98rem;
+    }
+    .role-guide-card ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.86rem;
+      line-height: 1.65;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-title"><i class="fa-solid fa-graduation-cap"></i><span>CBT SRT 68 Luwu Utara</span></div>
+      <div class="brand-sub">Portal Asesmen Sumatif • V.2.5</div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="1-manajemen-data-pengguna.html"><i class="fa-solid fa-users-gear"></i><span>Data &amp; Pengguna</span></a>
+      <a href="2a-mata-pelajaran.html"><i class="fa-solid fa-book"></i><span>Mata Pelajaran</span></a>
+      <a href="2-bank-soal.html"><i class="fa-solid fa-file-pen"></i><span>Bank Soal</span></a>
+      <a href="4-proctoring-pengawas.html"><i class="fa-solid fa-desktop"></i><span>Proctoring</span></a>
+      <a href="5-penilaian-analisis.html"><i class="fa-solid fa-chart-column"></i><span>Penilaian</span></a>
+      <a href="6-rekap-wali-kelas.html"><i class="fa-solid fa-chalkboard-user"></i><span>Rekap Wali Kelas</span></a>
+      <a href="8-panduan-alur.html" class="active"><i class="fa-solid fa-circle-question"></i><span>Panduan &amp; Alur CBT</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" onclick="logoutCBT(); return false;" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i><span>Keluar / Login</span></a>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Panduan Penggunaan &amp; Alur Kerja Program CBT</div>
+        <div class="topbar-sub">Dokumentasi Operasional &amp; Standar Keamanan Ujian Berbasis Komputer • V.2.5</div>
+      </div>
+      <span class="badge badge-blue">VERSI 2.5 • BERSIH &amp; SIAP PRODUKSI</span>
+    </div>
+
+    <div class="container">
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-diagram-project"></i> Alur Pelaksanaan Ujian CBT (End-to-End)</div>
+        <div class="flow-grid">
+          <div class="flow-step">
+            <div class="flow-num">1</div>
+            <h4 style="margin:0 0 0.35rem 0;">Setup Kelas, Sesi &amp; Akun</h4>
+            <p style="font-size:0.83rem; color:var(--muted); margin:0;">Admin menambahkan data Kelas + ID Kelas, Ruangan, Sesi Ujian beserta <strong>Mata Pelajaran Aktif per Sesi</strong>, serta akun Guru, Wali Kelas, Proktor, dan Siswa.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">2</div>
+            <h4 style="margin:0 0 0.35rem 0;">Input Mata Pelajaran &amp; Soal</h4>
+            <p style="font-size:0.83rem; color:var(--muted); margin:0;">Admin/Guru menambahkan Mata Pelajaran dan menyusun soal (PG, Benar/Salah, Isian, Menjodohkan, Esai) lengkap dengan rumus matematika &amp; gambar.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">3</div>
+            <h4 style="margin:0 0 0.35rem 0;">Rilis Token &amp; Pengawasan</h4>
+            <p style="font-size:0.83rem; color:var(--muted); margin:0;">Proktor merilis <strong>Token Ujian</strong> di menu Proctoring dan memantau kehadiran, progres pengerjaan, serta pelanggaran peserta secara real-time.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">4</div>
+            <h4 style="margin:0 0 0.35rem 0;">Ujian Multi-Mapel Peserta</h4>
+            <p style="font-size:0.83rem; color:var(--muted); margin:0;">Peserta login dalam mode Fullscreen, mengerjakan seluruh mata pelajaran aktif pada sesinya secara berurutan, lalu menekan <strong>Yes</strong> untuk menyelesaikan.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">5</div>
+            <h4 style="margin:0 0 0.35rem 0;">Penilaian &amp; Rekap Wali Kelas</h4>
+            <p style="font-size:0.83rem; color:var(--muted); margin:0;">Nilai objektif terhitung otomatis, Guru mengoreksi soal Esai, dan Wali Kelas mengunduh rekap nilai lengkap seluruh mapel per kelas ke Excel.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-user-shield"></i> Panduan Tugas Berdasarkan Hak Akses (Role)</div>
+
+        <div class="role-guide-card">
+          <h4>1. Administrator (Login Awal: <code>admin</code> / Password: <code>123</code>)</h4>
+          <ul>
+            <li>Mengelola master data <strong>Kelas &amp; ID Kelas</strong>, daftar <strong>Mata Pelajaran</strong>, <strong>Ruangan Ujian</strong>, serta <strong>Jadwal Sesi Ujian</strong>.</li>
+            <li>Pada menu <strong>Data &amp; Pengguna &rarr; Sesi Ujian</strong>, Admin dapat mencentang <strong>lebih dari satu Mata Pelajaran Aktif</strong> untuk satu sesi yang sama.</li>
+            <li>Membuat atau mengimpor akun <strong>Guru Mata Pelajaran</strong>, <strong>Wali Kelas</strong>, <strong>Proktor</strong>, dan <strong>Siswa</strong>, serta mencetak kartu login peserta.</li>
+          </ul>
+        </div>
+
+        <div class="role-guide-card">
+          <h4>2. Guru Mata Pelajaran</h4>
+          <ul>
+            <li>Memilih mata pelajaran yang diampu pada menu <strong>Mata Pelajaran</strong> lalu menyusun soal di menu <strong>Bank Soal</strong>.</li>
+            <li>Memeriksa hasil ujian pada menu <strong>Penilaian</strong>, memberikan skor manual untuk soal Esai, dan mengunduh analisis butir soal.</li>
+            <li>Dapat mengganti password serta foto profil melalui menu <strong>Pengaturan Guru</strong>.</li>
+          </ul>
+        </div>
+
+        <div class="role-guide-card">
+          <h4>3. Proktor / Pengawas Ruangan</h4>
+          <ul>
+            <li>Membuka menu <strong>Proctoring</strong> dan menekan <strong>Rilis Token Baru</strong> sebelum sesi dimulai.</li>
+            <li>Memantau peserta yang terblokir akibat pelanggaran keamanan (maksimal <strong>3x pelanggaran</strong>). Jika akun siswa terblokir, sistem otomatis membuatkan <strong>6 digit Token Buka Blokir</strong> yang tampil di tabel Proctoring untuk diberikan kepada peserta.</li>
+          </ul>
+        </div>
+
+        <div class="role-guide-card">
+          <h4>4. Peserta Ujian (Siswa)</h4>
+          <ul>
+            <li>Login menggunakan Nomor Peserta/NISN, Password, dan Token Ujian dari Proktor.</li>
+            <li><strong>Indikator Tombol Soal:</strong> Nomor berwarna <strong>Hijau</strong> menandakan soal sudah dijawab; warna <strong>Kuning</strong> menandakan Ragu-Ragu (otomatis berubah Hijau kembali ketika jawaban dipilih/diisi, dan tetap Hijau saat berpindah dengan tombol <em>Sebelumnya</em>).</li>
+            <li><strong>Keamanan Layar Penuh:</strong> Dilarang keluar dari Fullscreen, menekan ESC, atau berpindah tab. Pelanggaran ke-3 otomatis mengunci soal dan memblokir akun hingga Token Buka Blokir baru dari Proktor dimasukkan.</li>
+          </ul>
+        </div>
+
+        <div class="role-guide-card">
+          <h4>5. Wali Kelas</h4>
+          <ul>
+            <li>Masuk menggunakan akun Wali Kelas sesuai ID Kelas binaan.</li>
+            <li>Melihat matriks rekap nilai gabungan seluruh mata pelajaran dan mengekspornya ke Excel pada menu <strong>Rekap Wali Kelas</strong>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="shared-cbt.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof applyRoleNavigation === 'function') applyRoleNavigation('8-panduan-alur.html');
+  });
+</script>
+</body>
+</html>
