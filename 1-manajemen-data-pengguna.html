@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>1. Manajemen Data, Kelas, Wali Kelas, Pengguna & Ruangan - CBT SRT 68 Luwu Utara V.1.0</title>
+  <title>1. Manajemen Data, Kelas, Wali Kelas, Pengguna & Ruangan - CBT SRT 68 Luwu Utara V.2.5</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="shared-cbt.css">
   <style>
@@ -213,7 +213,7 @@
 <body>
 
 <nav class="top-nav no-print">
-  <a href="1-manajemen-data-pengguna.html" class="brand"><span><i class="fa-solid fa-desktop" style="margin-right:6px;color:#f472b6;"></i>CBT SRT 68 Luwu Utara</span> <span>V.1.0</span></a>
+  <a href="1-manajemen-data-pengguna.html" class="brand"><span><i class="fa-solid fa-desktop" style="margin-right:6px;color:#f472b6;"></i>CBT SRT 68 Luwu Utara</span> <span>V.2.5</span></a>
   <div class="nav-links">
     <a href="1-manajemen-data-pengguna.html" class="active"><i class="fa-solid fa-users-gear"></i><span>Data, Kelas & Pengguna</span></a>
     <a href="2-bank-soal.html"><i class="fa-solid fa-book-open"></i><span>Bank Soal & Mapel</span></a>
@@ -661,6 +661,13 @@
               </select>
             </div>
           </div>
+          <div class="form-group" style="margin-top:0.25rem;">
+            <label>Mata Pelajaran Aktif pada Sesi Ini (Bisa Pilih Lebih dari Satu)</label>
+            <div id="sesiMapelChecklist" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:0.45rem; max-height:145px; overflow-y:auto; border:1px solid var(--border); background:#fff; padding:0.65rem 0.8rem; border-radius:8px;">
+              <span style="font-size:0.8rem; color:var(--muted);">Memuat daftar mata pelajaran...</span>
+            </div>
+            <span style="font-size:0.74rem; color:var(--muted); display:block; margin-top:4px;">Jika dicentang lebih dari 1 mapel, peserta pada sesi ini akan mengerjakan semua mapel tersebut secara berurutan.</span>
+          </div>
           <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Tambah Sesi Ujian</button>
         </form>
 
@@ -670,6 +677,7 @@
               <tr>
                 <th>Nama Sesi</th>
                 <th>Waktu & Durasi</th>
+                <th>Mapel Aktif Sesi</th>
                 <th>Akses Kelas</th>
                 <th style="width:120px;">Aksi</th>
               </tr>
@@ -964,6 +972,7 @@
     renderUsers();
     populateUserClassDropdown();
     populateClassAccessDropdowns();
+    renderSesiMapelChecklist();
     switchClassInnerView('list');
     showCBTNotification('success', 'Data Kelas Tersimpan', `Kelas "${namaKelas}" (${idKelas}) & Wali Kelas "${waliName}" berhasil disimpan.`);
   }
@@ -1093,6 +1102,7 @@
     renderUsers();
     populateUserClassDropdown();
     populateClassAccessDropdowns();
+    renderSesiMapelChecklist();
     renderKartu();
     showCBTNotification(
       'success',
@@ -1293,26 +1303,49 @@
   // PENGATURAN SESI & RUANGAN UJIAN
   // ==========================================================================
   function getMeta() {
+    const db = getDB();
     const raw = localStorage.getItem(META_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      parsed.sessionsList = (parsed.sessionsList || []).map(s => ({ ...s, kelasAkses: s.kelasAkses || 'ALL' }));
+      parsed.sessionsList = (parsed.sessionsList || []).map(s => {
+        const dbMatch = (db.sessionsList || []).find(ds => ds.id === s.id || ds.name === s.name);
+        const activeSubjs = Array.isArray(s.activeSubjects) && s.activeSubjects.length > 0
+          ? s.activeSubjects
+          : (dbMatch && Array.isArray(dbMatch.activeSubjects) ? dbMatch.activeSubjects : []);
+        return { ...s, kelasAkses: s.kelasAkses || 'ALL', activeSubjects: activeSubjs };
+      });
       parsed.roomsList = (parsed.roomsList || []).map(r => ({ ...r, kelasAkses: r.kelasAkses || 'ALL' }));
       return parsed;
     }
     const initial = {
-      sessionsList: [
-        { id: 'S1', name: 'Sesi 1', start: '07:30', end: '09:30', kelasAkses: 'ALL' },
-        { id: 'S2', name: 'Sesi 2', start: '10:00', end: '12:00', kelasAkses: 'ALL' },
-        { id: 'S3', name: 'Sesi 3', start: '13:00', end: '15:00', kelasAkses: 'ALL' }
+      sessionsList: (db.sessionsList && db.sessionsList.length > 0) ? db.sessionsList : [
+        { id: 'S1', name: 'Sesi 1', start: '07:30', end: '09:30', kelasAkses: 'ALL', activeSubjects: [] },
+        { id: 'S2', name: 'Sesi 2', start: '10:00', end: '12:00', kelasAkses: 'ALL', activeSubjects: [] },
+        { id: 'S3', name: 'Sesi 3', start: '13:00', end: '15:00', kelasAkses: 'ALL', activeSubjects: [] }
       ],
-      roomsList: [
+      roomsList: (db.roomsList && db.roomsList.length > 0) ? db.roomsList : [
         { id: 'R1', name: 'Lab Komputer 1', capacity: 36, note: 'Gedung Utama Lt. 1', kelasAkses: 'ALL' },
         { id: 'R2', name: 'Lab Komputer 2', capacity: 36, note: 'Gedung Utama Lt. 2', kelasAkses: 'ALL' }
       ]
     };
     localStorage.setItem(META_STORAGE_KEY, JSON.stringify(initial));
     return initial;
+  }
+
+  function renderSesiMapelChecklist() {
+    const container = document.getElementById('sesiMapelChecklist');
+    if (!container) return;
+    const db = getDB();
+    const subjects = (db.settings && Array.isArray(db.settings.subjectsList) && db.settings.subjectsList.length > 0)
+      ? db.settings.subjectsList
+      : [db.settings?.subject || 'Informatika & Literasi Digital'];
+
+    container.innerHTML = subjects.map(subj => `
+      <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.83rem; font-weight:600; cursor:pointer; margin:0; color:var(--text);">
+        <input type="checkbox" name="sesiActiveMapel" value="${subj}" style="width:16px; height:16px; accent-color:var(--primary);">
+        <span>${subj}</span>
+      </label>
+    `).join('');
   }
 
   function saveMeta(meta) {
@@ -1358,6 +1391,7 @@
     }).join('');
 
     populateClassAccessDropdowns();
+    renderSesiMapelChecklist();
   }
 
   function grantAllClassesToAll() {
@@ -1387,14 +1421,60 @@
     const start = document.getElementById('sesiStart').value;
     const end = document.getElementById('sesiEnd').value;
     const kelasAkses = document.getElementById('sesiKelasAkses').value || 'ALL';
+    const activeSubjects = Array.from(document.querySelectorAll('input[name="sesiActiveMapel"]:checked')).map(cb => cb.value);
     if (start >= end) return alert('Jam selesai harus lebih akhir daripada jam mulai!');
 
     const meta = getMeta();
-    meta.sessionsList.push({ id: 'S_' + Date.now(), name, start, end, kelasAkses });
+    meta.sessionsList.push({ id: 'S_' + Date.now(), name, start, end, kelasAkses, activeSubjects });
     saveMeta(meta);
     e.target.reset();
     document.getElementById('sesiKelasAkses').value = 'ALL';
-    showCBTNotification('success', 'Sesi Ditambahkan', `Sesi "${name} (${start} - ${end})" berhasil ditambahkan!`);
+    renderSesiMapelChecklist();
+    showCBTNotification('success', 'Sesi Ditambahkan', `Sesi "${name} (${start} - ${end})" berhasil ditambahkan dengan ${activeSubjects.length || 1} mata pelajaran aktif!`);
+  }
+
+  function editSessionMapel(sessionId) {
+    if (!requireAdminAction('mengatur mata pelajaran aktif sesi')) return;
+    const meta = getMeta();
+    const sesi = meta.sessionsList.find(s => s.id === sessionId);
+    if (!sesi) return;
+
+    const db = getDB();
+    const allSubjects = (db.settings && Array.isArray(db.settings.subjectsList) && db.settings.subjectsList.length > 0)
+      ? db.settings.subjectsList
+      : [db.settings?.subject || 'Informatika & Literasi Digital'];
+
+    const currentSet = new Set(sesi.activeSubjects || []);
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:99999; display:flex; align-items:center; justify-content:center; padding:1rem;';
+    modal.innerHTML = `
+      <div style="background:#fff; border-radius:14px; max-width:460px; width:100%; padding:1.5rem; box-shadow:0 20px 40px rgba(0,0,0,0.3);">
+        <h3 style="margin-bottom:0.35rem; font-weight:800; color:var(--primary-dark);">Atur Mata Pelajaran Aktif</h3>
+        <p style="font-size:0.83rem; color:var(--muted); margin-bottom:1rem;">Pilih satu atau beberapa mata pelajaran yang diujikan pada <strong>${sesi.name} (${sesi.start} - ${sesi.end})</strong>:</p>
+        <div style="display:flex; flex-direction:column; gap:0.5rem; max-height:240px; overflow-y:auto; border:1px solid var(--border); padding:0.75rem; border-radius:10px; margin-bottom:1rem;">
+          ${allSubjects.map(subj => `
+            <label style="display:flex; align-items:center; gap:0.6rem; font-size:0.86rem; font-weight:600; cursor:pointer; margin:0;">
+              <input type="checkbox" value="${subj}" ${currentSet.has(subj) ? 'checked' : ''} style="width:17px; height:17px; accent-color:var(--primary);">
+              <span>${subj}</span>
+            </label>
+          `).join('')}
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+          <button type="button" class="btn btn-outline" id="btnCancelMapelModal">Batal</button>
+          <button type="button" class="btn btn-primary" id="btnSaveMapelModal">Simpan Mapel Sesi</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btnCancelMapelModal').onclick = () => modal.remove();
+    modal.querySelector('#btnSaveMapelModal').onclick = () => {
+      const selected = Array.from(modal.querySelectorAll('input[type="checkbox"]:checked')).map(el => el.value);
+      sesi.activeSubjects = selected;
+      saveMeta(meta);
+      modal.remove();
+      showCBTNotification('success', 'Mapel Sesi Diperbarui', `Mata pelajaran aktif untuk ${sesi.name} berhasil disimpan (${selected.length} mapel).`);
+    };
   }
 
   async function deleteCustomSession(id) {
@@ -1464,10 +1544,21 @@
         ? `<span class="access-all-badge"><i class="fa-solid fa-globe"></i> Semua Kelas</span>`
         : `<span class="badge badge-amber">${s.kelasAkses}</span> <button class="btn btn-outline btn-sm" onclick="toggleItemAllClasses('sesi','${s.id}')">Buka Semua Kelas</button>`;
 
+      const subjs = Array.isArray(s.activeSubjects) && s.activeSubjects.length > 0
+        ? s.activeSubjects
+        : [];
+      const mapelHtml = subjs.length > 0
+        ? subjs.map((m, idx) => `<span class="badge badge-blue" style="margin:1px 2px 2px 0; display:inline-block;">${idx + 1}. ${m}</span>`).join('')
+        : `<span class="badge badge-gray">Default Mapel Global</span>`;
+
       return `
         <tr>
           <td><strong>${s.name}</strong></td>
           <td>${s.start} - ${s.end} WIB<br><span class="badge badge-blue">${diffMins} Menit</span></td>
+          <td>
+            <div style="margin-bottom:4px;">${mapelHtml}</div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="editSessionMapel('${s.id}')"><i class="fa-solid fa-book-open"></i> Atur Mapel (${subjs.length})</button>
+          </td>
           <td>${aksesBadge}</td>
           <td><button class="btn btn-danger btn-sm" onclick="deleteCustomSession('${s.id}')">Hapus</button></td>
         </tr>
@@ -1633,6 +1724,7 @@
     }
     if (tabId === 'tab-sesi-ruang') {
       populateClassAccessDropdowns();
+    renderSesiMapelChecklist();
       renderSesiAndRooms();
       switchSRInnerView('sesi');
     }
@@ -1916,6 +2008,7 @@
     renderUsers();
     renderClassesTable();
     populateClassAccessDropdowns();
+    renderSesiMapelChecklist();
     switchUserInnerView('list');
   }
 
@@ -1951,6 +2044,7 @@
     renderClassesTable();
     populateUserClassDropdown();
     populateClassAccessDropdowns();
+    renderSesiMapelChecklist();
     showCBTNotification('success', 'Akun Dihapus', `Akun ${target.role} "${target.name}" berhasil dihapus dari sistem.`);
   }
 
@@ -2051,6 +2145,7 @@
       renderUsers();
       renderClassesTable();
       populateClassAccessDropdowns();
+    renderSesiMapelChecklist();
       switchUserInnerView('list');
       event.target.value = '';
       showCBTNotification('success', 'Impor .DOCX Berhasil', `Berhasil mengimpor ${count} data ${activeRoleMenu} dari file Word!`);
@@ -2101,6 +2196,7 @@
       renderClassesTable();
       populateUserClassDropdown();
       populateClassAccessDropdowns();
+    renderSesiMapelChecklist();
     });
   });
 </script>
