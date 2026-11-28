@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Login Utama - CBT SRT 68 Luwu Utara V.3.3</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="shared-cbt.css">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #500724 0%, #9d174d 55%, #ec4899 100%);
+      padding: 1.25rem;
+    }
+    .portal-wrapper {
+      width: 100%;
+      max-width: 960px;
+      background: #ffffff;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+    }
+    @media (max-width: 820px) {
+      .portal-wrapper { grid-template-columns: 1fr; }
+    }
+    .portal-side {
+      background: #500724;
+      color: #f8fafc;
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .portal-badge {
+      display: inline-block;
+      background: rgba(236, 72, 153, 0.25);
+      border: 1px solid #f472b6;
+      color: #fbcfe8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    .portal-side h1 {
+      font-size: 1.65rem;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 0.75rem;
+    }
+    .portal-side p {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .feature-list {
+      margin-top: 1.5rem;
+      list-style: none;
+      font-size: 0.84rem;
+      color: #cbd5e1;
+    }
+    .feature-list li {
+      margin-bottom: 0.65rem;
+      padding-left: 1.35rem;
+      position: relative;
+    }
+    .feature-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #f472b6;
+      font-weight: 800;
+    }
+    .portal-form-area {
+      padding: 2.25rem 2rem;
+    }
+    .role-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      background: #fdf2f8;
+      padding: 0.35rem;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+    }
+    .switch-btn {
+      padding: 0.65rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+      background: transparent;
+      color: #475569;
+      transition: all 0.2s;
+    }
+    .switch-btn.active {
+      background: #db2777;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(219, 39, 119, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+<div class="portal-wrapper">
+  <div class="portal-side">
+    <div>
+      <span class="portal-badge">CBT SRT 68 LUWU UTARA • V.3.3</span>
+      <h1 id="portalExamTitle">CBT SRT 68 Luwu Utara V.3.3</h1>
+      <p id="portalExamSubject">Portal Aplikasi Asesmen Sumatif Akhir Semester (ASAS)</p>
+
+      <ul class="feature-list">
+        <li><strong>Menu Siswa:</strong> Verifikasi token sesi & otomatis masuk mode layar penuh (Fullscreen).</li>
+        <li><strong>Menu Guru:</strong> Akses kelola Mata Pelajaran (Mapel), Bank Soal, dan Rekap Nilai.</li>
+        <li><strong>Menu Wali Kelas:</strong> Rekap otomatis nilai seluruh mata pelajaran sesuai ID Kelas yang diampu.</li>
+        <li><strong>Menu Administrator:</strong> Pengaturan Kelas, ID Kelas, Wali Kelas, Ruang & Sesi Ujian serta seluruh modul CBT.</li>
+      </ul>
+    </div>
+    <div style="font-size:0.78rem; color:#64748b; margin-top:2rem;">
+      Status Server: <span id="serverStatus" style="color:#f9a8d4; font-weight:700;">Menghubungkan Supabase Cloud...</span><br><div style="margin-top:0.5rem; color:#fbcfe8; font-weight:600;">&copy; 2026 Sekolah Rakyat Terintegrasi 68 Luwu Utara</div>
+    </div>
+  </div>
+
+  <div class="portal-form-area">
+    <div class="role-switcher">
+      <button type="button" class="switch-btn active" id="tabBtnSiswa" onclick="switchLoginMode('siswa')">Login Peserta / Siswa</button>
+      <button type="button" class="switch-btn" id="tabBtnAdmin" onclick="switchLoginMode('admin')">Login Admin / Guru / Wali</button>
+    </div>
+
+    <!-- FORM LOGIN SISWA -->
+    <form id="formLoginSiswa" onsubmit="handleSiswaLogin(event)">
+      <h2 style="font-size:1.25rem; font-weight:800; margin-bottom:0.25rem;">Masuk Ruang Ujian Peserta</h2>
+      <p style="font-size:0.84rem; color:var(--muted); margin-bottom:1.25rem;">Masukkan NISN, kata sandi, dan token aktif dari pengawas ruangan.</p>
+
+      <div class="form-group">
+        <label>Nomor Peserta / NISN</label>
+        <input type="text" id="siswaUser" required placeholder="Contoh: 2026001" value="">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="password-field-wrap">
+          <input type="password" id="siswaPass" required placeholder="Masukkan password" value="">
+          <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('siswaPass', this)" title="Lihat password" aria-label="Lihat password">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Token Ujian Aktif</label>
+        <input type="text" id="siswaToken" required placeholder="*****" style="text-transform:uppercase; font-weight:700; letter-spacing:1.5px;">
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%; padding:0.8rem; font-size:0.95rem; margin-top:0.5rem;">
+        Mulai Ujian Sekarang (Fullscreen)
+      </button>
+    </form>
+
+    <!-- FORM LOGIN ADMINISTRATOR, GURU & WALI KELAS -->
+    <form id="formLoginAdmin" style="display:none;" onsubmit="handleStaffLogin(event)">
+      <h2 style="font-size:1.25rem; font-weight:800; margin-bottom:0.25rem;">Login Admin, Guru & Wali Kelas</h2>
+      <p style="font-size:0.84rem; color:var(--muted); margin-bottom:1.25rem;">
+        <strong>Admin:</strong> Akses penuh manajemen kelas, pengguna & seluruh modul.<br>
+        <strong>Guru:</strong> Akses langsung Manajemen Mapel, Bank Soal & Rekap Nilai.<br>
+        <strong>Wali Kelas:</strong> Akses langsung Rekap Semua Mapel sesuai ID Kelas.
+      </p>
+
+      <div class="form-group">
+        <label>Username / NIP</label>
+        <input type="text" id="staffUser" required placeholder="Username atau NIP" value="">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="password-field-wrap">
+          <input type="password" id="staffPass" required placeholder="Masukkan password" value="">
+          <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('staffPass', this)" title="Lihat password" aria-label="Lihat password">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-success" style="width:100%; padding:0.8rem; font-size:0.95rem; margin-top:0.75rem;">
+        Masuk Sekarang
+      </button>
+    </form>
+  </div>
+</div>
+
+<script src="shared-cbt.js"></script>
+<script>
+  function switchLoginMode(mode) {
+    const isSiswa = mode === 'siswa';
+    document.getElementById('tabBtnSiswa').classList.toggle('active', isSiswa);
+    document.getElementById('tabBtnAdmin').classList.toggle('active', !isSiswa);
+    document.getElementById('formLoginSiswa').style.display = isSiswa ? 'block' : 'none';
+    document.getElementById('formLoginAdmin').style.display = isSiswa ? 'none' : 'block';
+  }
+
+  function handleSiswaLogin(e) {
+    e.preventDefault();
+    const db = getDB();
+    const uname = document.getElementById('siswaUser').value.trim();
+    const pass = document.getElementById('siswaPass').value.trim();
+    const token = document.getElementById('siswaToken').value.trim().toUpperCase();
+
+    let user = (db.users || []).find(u => u.username === uname && u.password === pass && u.role === 'Siswa');
+    if (!user && uname === 'Fajar' && pass === '123') {
+      user = { id: 'USR_DUMMY_FAJAR_SISWA', username: 'Fajar', password: '123', name: 'Fajar (Mode Uji Siswa)', role: 'Siswa', kelas: 'XII-TKJ-1', idKelas: 'KLS-XII-TKJ-1', sesi: 'Sesi 1 (07:30 - 09:30)', ruang: 'Lab Komputer 1' };
+    }
+    if (!user) return alert('Nomor peserta atau kata sandi siswa tidak ditemukan!');
+    if (token !== (db.settings.activeToken || '').toUpperCase()) {
+      return alert('Token sesi ujian tidak sesuai atau belum aktif!');
+    }
+
+    const sess = (db.sessions || {})[uname];
+    if (sess && sess.status === 'Diblokir') {
+      return alert('Akun Anda sedang DIBLOKIR oleh pengawas ruangan!');
+    }
+
+    sessionStorage.setItem('CBT_AUTO_LOGIN_SISWA', JSON.stringify({ username: uname, password: pass, token }));
+    window.location.href = '3-ujian-peserta.html?autostart=1';
+  }
+
+  function handleStaffLogin(e) {
+    e.preventDefault();
+    const db = getDB();
+    const uname = document.getElementById('staffUser').value.trim();
+    const pass = document.getElementById('staffPass').value.trim();
+
+    const staff = (db.users || []).find(u =>
+      u.username === uname && u.password === pass && ['Admin', 'Guru', 'Wali Kelas', 'Proktor'].includes(u.role)
+    );
+    if (!staff) return alert('Username atau kata sandi Admin/Guru/Wali Kelas salah!');
+
+    const resolvedIdKelas = staff.idKelas || resolveIdKelasFromName(staff.kelas);
+
+    const savedPhotos = (typeof getSavedUserPhotosMap === 'function') ? getSavedUserPhotosMap() : {};
+    sessionStorage.setItem('CBT_STAFF_AUTH', JSON.stringify({
+      id: staff.id,
+      username: staff.username,
+      name: staff.name,
+      role: staff.role,
+      subject: staff.kelas || '',
+      kelas: staff.kelas || '',
+      idKelas: resolvedIdKelas,
+      photoUrl: staff.photoUrl || savedPhotos[staff.username] || ''
+    }));
+
+    if (staff.role === 'Admin') {
+      window.location.href = '1-manajemen-data-pengguna.html';
+    } else if (staff.role === 'Guru') {
+      window.location.href = '2-bank-soal.html';
+    } else if (staff.role === 'Wali Kelas') {
+      window.location.href = '6-rekap-wali-kelas.html';
+    } else if (staff.role === 'Proktor') {
+      window.location.href = '4-proctoring-pengawas.html';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    syncFromMySQL((db) => {
+      document.getElementById('portalExamTitle').textContent = db.settings.examTitle || 'Sistem Ujian CBT';
+      document.getElementById('portalExamSubject').textContent = 'Portal Aplikasi Asesmen Sumatif Akhir Semester (ASAS)';
+      document.getElementById('serverStatus').textContent = 'Terhubung ke Supabase Cloud (' + (db.users || []).length + ' akun)';
+    });
+  });
+</script>
+</body>
+</html>
